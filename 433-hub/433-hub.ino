@@ -67,16 +67,6 @@
   * If both methods fail, then the signal cannot be copied.
   *  
   *  
-  *  
-  *  TODO
-  *  - Check if signal is already stored before storing it. Then again, there are good reasons to store a signal again. Perhaps only check for doubles with recognise-only signals?
-  *  - Make things use 'return' or 'break' to keep processing times low. (mostly done).
-  *  - make the pattern finder need less memory. It should scan what it found to find anomalies (one or more, in one place or several!). 
-  *     It should then maybe declare the beginning of the signal. The storage mechanism should then wrap around at endPosition and continue at startPosition. 
-  *     If two anomaly clusters exist, then startPosition could become the first anomaly cluster, and end position the second anomaly cluster.
-  *     Perhaps this can be fed into a common function that works its maagic after the repeating part is found.
-  *  - Another bit could be used to store if an on/off signal should also be recognisable. That way the remote could be used twice somehow.. Or: 
-  *  - request current status of on/off toggles from the controller. Though it might be jarring or even dangerous if all devices suddenly toggled to their new positions.
   */
 
 
