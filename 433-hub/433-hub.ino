@@ -67,6 +67,16 @@
   * If both methods fail, then the signal cannot be copied.
   *  
   *  
+  *  
+  *  TODO
+  *  - Check if signal is already stored before storing it. Then again, there are good reasons to store a signal again. Perhaps only check for doubles with recognise-only signals?
+  *  - Make things use 'return' or 'break' to keep processing times low. (mostly done).
+  *  - make the pattern finder need less memory. It should scan what it found to find anomalies (one or more, in one place or several!). 
+  *     It should then maybe declare the beginning of the signal. The storage mechanism should then wrap around at endPosition and continue at startPosition. 
+  *     If two anomaly clusters exist, then startPosition could become the first anomaly cluster, and end position the second anomaly cluster.
+  *     Perhaps this can be fed into a common function that works its maagic after the repeating part is found.
+  *  - Another bit could be used to store if an on/off signal should also be recognisable. That way the remote could be used twice somehow.. Or: 
+  *  - request current status of on/off toggles from the controller. Though it might be jarring or even dangerous if all devices suddenly toggled to their new positions.
   */
 
 
@@ -124,7 +134,7 @@ SSD1306AsciiAvrI2c oled;
 #define KEYPAD_PIN A0                               // The pin where the analog keypad is connected. These keypads vary their resistance according to which button is pressed.
 byte buttonPressed = 0;                             // The last button that was pressed by the user.
 byte prevButtonState = 0;                           
-boolean buttonsToggleStatus[KEYPAD_BUTTON_COUNT];   // Array to hold the buttons' toggle status (if the button has an on/off signal). For simple signals buttonsToggleStatus[x] is always 0. For on/off signals this actually switches between 0 and 1.
+boolean buttonsToggleStatus[KEYPAD_BUTTON_COUNT + 1];  // Array to hold the buttons' toggle status (if the button has an on/off signal). For simple signals buttonsToggleStatus[x] is always 0. For on/off signals this actually switches between 0 and 1. For simplicity, the zero position of the array is ignored.
 static unsigned long lastLoopTime = 0;              // Holds the last time the main loop ran.
 
 
@@ -534,28 +544,23 @@ void loop()
             }
             scanEeprom();                           // Re-index the EEPROM, which in this case sets all signal counters back to 0.
             state = LISTENING;
-            //updateDisplay(LISTENING);
           }
           else if( state == DELETE_LAST){
             scanEeprom();
             updateDisplay(DELETE_LAST);
             state = LISTENING;
-            //updateDisplay(LISTENING);
           }
         }
         else if( buttonPressed > 0 && buttonPressed < KEYPAD_BUTTON_COUNT - 1 ){  // A send-signal button is being pressed, and we're not inside the menu, so we should replay a signal.
           state = REPLAYING;
           replay(buttonPressed);
           state = LISTENING;
-          //updateDisplay(LISTENING);
         }
         updateDisplay(state);
         clearTimingsArray();
       }
     }                                               // End of checking if the menu button is being pressed.
 #endif
-
-
   }                                                 // End of checking the received signal.
 }                                                   // End of main loop.
 
@@ -725,20 +730,16 @@ boolean signalCleaner()
     if( bucketCount != prevBucketCount ){           // If the bucketCount changed, then we may want to comb through the timings array again with the same P setting.
       //Serial.print(F("Setting prevBucketCount to ")); Serial.println(bucketCount);
       prevBucketCount = bucketCount;
-
       if(betweenSpace != 250 && bucketCount < 5){   // We found the betweenSpace and have a cleaned up signal. So we have all that we need.
         p = 5;                                      // Breaks out of the while loop.
       }
-      
     }
     else{                                           // If the bucketcount is unchanged, the current P setting is no longer having any effect, and we should try increasing it.
       //Serial.println(F("Unchanged bucketcount"));
       p++;                                          // By increasing P the next iteration will be allowed to merge timings together that are further apart from each other.
     }
-
     lastOftenFoundTiming = 0;
     printRawSignal();
-    
     if( highestFoundTiming < 10 ){                  // After one round of cleaning the signal we can exit the process here in case the signal is very fast. Otherwise we may acutally damage the timings data by merging them too much.
 #ifdef DEBUG
       Serial.println(F("Fast signal"));             // This is a very fast signal (probably without a betweenSpace anyway). Some more expensive modern devices use this. Wireless carkeys, for example.
@@ -746,8 +747,6 @@ boolean signalCleaner()
       break;
     }
   }                                                 // end of P while loop
-
-
   if( betweenSpace == 250 ){                        // 250 is the default. This means the previous function did not find a between-space indicator. Time to bring in the pattern finder.
     if( findPattern() ){                            // The pattern finder uses the 'brute force method' to detect a repeating pattern in the signal.
       //Serial.print(F(" pattern found startPosition: ")); Serial.println(startPosition);
@@ -774,7 +773,6 @@ boolean signalAnalysis()
 {
   //Serial.println(F("__signalAnalysis"));
   byte jump = 1;                                    // Used by the function that tries to determine the timing duo's that the repeating signal consists of.
-  
   for( int i = startPosition; i < endPosition; i = i + jump ){ // loop over the repeating signal part and do some checks to see how well it compresses.
     byte patternCount = 0;
     // Find the repeating duos. Going over all the timings, we count how many of a pattern involving this timing and the next one we can find.
@@ -840,25 +838,14 @@ boolean signalAnalysis()
           Serial.println(F("eh?"));
           return false;
         }
-        // We only found one of this duo. This is the edge case where the data wasn't a duo. Is it at the beginning or end? This is used to determine which spacing we should get.
-        //startPosition = startPosition + (i - startPosition); // shifting it all further down the track a bit.
-        //endPosition = endPosition + (i - startPosition);
-        //i--; // fix for the offset.
-      //}
-        //else{
-      //  endPosition = endPosition - 2;
-        //}
       }
     }
   } // end of analysing the duo's
-
-
   // Switch the duo's around in necessary, so that the one the has a differnce in timings is the first one. This will save a byte in storage later.
   if( metaData[0] == metaData[1] == metaData[2] && metaData[1] < metaData[3]){
     metaData[1] = metaData[3];
     metaData[3] = metaData[0];
   }
-
 #ifdef DEBUG
   // Here we draw the to serial output as duo's.
   Serial.println();
@@ -875,7 +862,6 @@ boolean signalAnalysis()
       Serial.println();    
     }
   }
-
   Serial.println();
   Serial.println();
   Serial.println(repeatingPatternLength);
@@ -890,25 +876,22 @@ boolean signalAnalysis()
   Serial.println(metaData[6]);
   Serial.println(metaData[7]);
 #endif
-
   // Do a quick clean check of how long the repeating signal is. I guess I don't trust the code above 100% :-)
   jump = 1;
   repeatingPatternLength = 0;
   for ( int i = startPosition; i < endPosition; i = i + jump ){ // Loop over the repeating signal part and do some checks to see how well it compresses.
-      if( (timings[i] == metaData[0] && timings[i + 1] == metaData[1]) || (timings[i] == metaData[2] && timings[i + 1] == metaData[3]) ){
-        repeatingPatternLength = repeatingPatternLength + 2;
-        jump = 2;        
-      }
+    if( (timings[i] == metaData[0] && timings[i + 1] == metaData[1]) || (timings[i] == metaData[2] && timings[i + 1] == metaData[3]) ){
+      repeatingPatternLength = repeatingPatternLength + 2;
+      jump = 2;        
+    }
   }
   repeatingSignalByteLength = (byte)repeatingPatternLength / 16;
   if( repeatingPatternLength % 16 > 0 ){ repeatingSignalByteLength++; } // If there is a nibble (half a byte) left over, then increase the required array length by one.
   if( repeatingPatternLength % 16 == 8 ){
     lastByteIsSplit = true;
   }
-  
   // Take 8 bits and encode them into a byte.
   for( byte i = 0; i < repeatingSignalByteLength; i++ ){
-
     byte eepromByte = 0;
     for( int j = 0; j < 8; j++ ){
       if( timings[startPosition] == metaData[0] && timings[startPosition + 1] == metaData[1] ){
@@ -931,37 +914,27 @@ boolean signalAnalysis()
     Serial.print(i); Serial.print(F(" > ")); Serial.println(eepromByte); Serial.print(F(" "));
 #endif
   }
-
-
   if( timings[0] == 0 && timings[1] == 0 ){ return false; } // A quick final quality check. Might be superfluous.
-
-  //startPosition = 1;                              // Reset the start position of a clean signal
-  //endPosition = MAXEDGES - 1;                     // Reset the end position of a clean signal
   return true;                                      // return if the signal analysis went ok.
 }
 
 
-
-
 //
-//   PATTERN FINDER
+//  PATTERN FINDER
 //
-// Finds repeating patterns in the signal data. This is a backup function. Some signals don't have a betweenSpace. In those cases we use brute force to look for the longest repeating pattern we can find. This function takes longer.
+//  Finds repeating patterns in the signal data. This is a backup function. Some signals don't have a betweenSpace. In those cases we use brute force to look for the longest repeating pattern we can find. This function takes longer.
 
 boolean findPattern()
 {
     //Serial.print(F("___pattern_finder___"));     
     byte maxPatternLength = (byte)constrain((endPosition-startPosition)/2, 31, 255); // what length is the pattern we're looking for allowed to be? It's most likely 8 bytes = 64 bits = 128 timings, but we can't be sure in this case. To find a repeating pattern, we need to be able to have it in the data twice, so the maximum length is the timings array length divided by two.
-
     byte searchLength = 32;                         
     while( searchLength + 4 <= maxPatternLength ){ // Check the maximum pattern length we can search for in the current memory.
       searchLength = searchLength + 4;
     }
     //Serial.print(F(" searchLength that we begin pattern matching with: ")); Serial.println(searchLength);
-
     for( searchLength; searchLength > MINIMAL_SIGNAL_LENGTH; searchLength = searchLength - 4 ){ // Find repeating patterns of a minimal length, starting with a long as possible signal, and then working down.
       //Serial.print(F(" -trying length: ")); Serial.println(searchLength);
-
       int patternFirstPosition = 0;                 // Where we found an often occuring pattern for the first time. To keep things simple(low memory) we only search the first 255 positions of the array.
       for ( int i = startPosition; i <= endPosition-searchLength; i++ ){
         byte patternCount = 0;
@@ -978,9 +951,7 @@ boolean findPattern()
             y = y + (searchLength-1);               // Minus one, because the for-loop will also add one. We skip ahead and see if we can find the same pattern again straigth after.
           }
         }
-    
         if(patternCount > 1){                       // We found a repeating pattern!
-
           // Quick quality check. It makes sure the found code isn't just the same number in a row a lot.
           int sameNumber = 0;
           for( int j = startPosition; j <= endPosition; j++ ){
@@ -991,7 +962,6 @@ boolean findPattern()
           if(sameNumber > 15){                      // This many of the same timings in a row is a bad sign.
             return false;
           }
-          
           Serial.print(F("Pattern: "));
           for (int t = 0; t < searchLength; t++) {
             Serial.print(timings[i + t]); Serial.print(F(",")); 
@@ -1016,24 +986,17 @@ boolean findPattern()
 byte scanEeprom()
 {
   byte whatWeCameHereFor = 0;
-  
   amountOfStoredSignals = 0;                        // Reset these. Everytime this function runs they are updated.
   amountOfStoredReplayableSignals = 0;
-  
   positionOfLastSignalEnd = EEPROM_STORAGE_START - 1; // MySensors has another value we could grab to get even more space.
-
   boolean finishedScanningEeprom = false;
   while( finishedScanningEeprom == false ){
     byte storedSignalLength = EEPROM.read(positionOfLastSignalEnd + 1); // This get the first byte of the next stored signal (if it exists), and indicates how much data it takes on the eeprom.
     if( storedSignalLength == 0xff ){               // No more signals found in the EEPROM.
       finishedScanningEeprom = true;
-      //if( state == STARTUP ){
-      //  whatWeCameHereFor = 1;                      // We got to the end, so we completed a full scan succesfully.
-      //}
     }
     else {
       //if( positionOfLastSignalEnd + storedSignalLength > EEPROM.length() ){ break; } // This should theoretically never happen. But if it did it would lock up the device, so it can't hurt.
-
       // DELETE THE LAST RECORDED SIGNAL?
       if( state == DELETE_LAST){
         Serial.print(F("deletelast check:")); Serial.println(storedSignalLength);
@@ -1049,30 +1012,26 @@ byte scanEeprom()
         }
         return 1;
       }
-
       amountOfStoredSignals++;                      // Update how many signals are stored in eeprom.
       byte descriptionData = EEPROM.read(positionOfLastSignalEnd + 1);
-      
       if( bitRead(descriptionData, DESCRIPTION_REPLAYABLE) == 1 ){  // Is it a replayable signal?
         amountOfStoredReplayableSignals++;
         if( state == REPLAYING && amountOfStoredReplayableSignals == buttonPressed ){
+          Serial.println(F("eeprom scan found the signal to replay"));
           whatWeCameHereFor = storedSignalLength;
           startPosition = positionOfLastSignalEnd + 1;  // Recycling variables to save memory.
           endPosition = positionOfLastSignalEnd + storedSignalLength;
         }
       }
-      
-
       // LISTENING
       positionOfLastSignalEnd = positionOfLastSignalEnd + storedSignalLength;
-
       if( state == LISTENING && whatWeCameHereFor == 0 && bitRead(descriptionData, DESCRIPTION_REPLAYABLE) == 0 ){ // We only check detect-only signals for now. This could be changed to include all signals (just remove the last check here)
         // We should scan the stored binary data against the last signal we received.
         boolean areTheyTheSame = true;              // the code below continously tries to disprove that they are the same, and skips ahead at the first evidence that this is the case.
         for( byte i = 0; i < 1 + bitRead(descriptionData, DESCRIPTION_ON_OFF); i++ ){ // This is a trick to be able to check both the on and off signals.
           Serial.print(F("on.off.check(0/1):")); Serial.println(i);
           areTheyTheSame = true;
-          Serial.println(repeatingSignalByteLength);
+          //Serial.println(repeatingSignalByteLength);
           for( byte j = 0; j < repeatingSignalByteLength; j++ ){
             /*
             Serial.print( (repeatingSignalByteLength - j) - 1 ); 
@@ -1088,7 +1047,6 @@ byte scanEeprom()
               break;
             }
           }
-          
           if( areTheyTheSame == true ){             // We've compared the entire signal, and.. they are the same!
             Serial.print(F("SEND: Toggle ")); Serial.print(10 + (amountOfStoredSignals - amountOfStoredReplayableSignals)); Serial.print(F(" to ")); Serial.println(i);
             connectedToNetwork = send(detectmsg.setSensor(10 + (amountOfStoredSignals - amountOfStoredReplayableSignals)).set(!i),1); // This sends the found value to the server. It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
@@ -1103,20 +1061,18 @@ byte scanEeprom()
       }
     }                                               // end of checking a stored signal.
   }                                                 // end of while loop, so the entire EEPROM has now been scanned.
-
   return whatWeCameHereFor;
 }
 
 
 //
-// STORE SIGNAL
+//  STORE SIGNAL
 //
 
 boolean writeSignalToEeprom()
 {
   Serial.println(F("__Storing"));
   byte signalDescriber = 0;                         // This will hold all the setings for this signal. The 'Description byte' is basically a settings switchboard that describes the signal. It helps to keep the required eeprom storage low.
-  
   if( (state == COPYING_ON || state == COPYING_SIMPLE) && amountOfStoredReplayableSignals == KEYPAD_BUTTON_COUNT - 1 ){
     updateDisplay(NO_MORE_FREE_BUTTONS);            // Warn the user: there are no more physical buttons left.
   } 
@@ -1155,7 +1111,6 @@ boolean writeSignalToEeprom()
  * bit 1. - What type of duo reconstruction can be done? This depends on bit 5 being set to 0, indicating a duo reconstruction should be performed. If they are mirrored, then (0) is stored. Is the first duo just twice the first timing of the second duo (e.g. if it is 2&2 + 2&7), then a 1 is stored.
  * bit 0. - Stores if the last byte of the repeating pattern is only half used.
  */
- 
 #ifdef DEBUG
   Serial.print(metaData[0]); Serial.println(F(" most popular bit-duo part A (0)"));
   Serial.print(metaData[1]); Serial.println(F(" most popular bit-duo part A (0)"));
@@ -1166,14 +1121,11 @@ boolean writeSignalToEeprom()
   Serial.print(metaData[6]); Serial.println(F(" spacer anomaly 3"));
   Serial.print(metaData[7]); Serial.println(F(" spacer anomaly 4"));
 #endif
-
   if( state != COPYING_OFF && state != LEARNING_OFF ){ // We only create the description bit on the ON part of an ON/OFF signal. The OFF part is just directly appended to the eeprom later.
-  
     // IS THE LAST BYTE SPLIT? (Uneven number of tri-bits)
     if( lastByteIsSplit ){
       bitWrite(signalDescriber, DESCRIPTION_HALFBYTE , 1);   // We use this position to remember if there is an even or uneven amount of 'nibbles' (a nibble is half a byte).
     }
-
     // ARE WE STORING AN ON/OFF SIGNAL?
     if( state == COPYING_ON || state == LEARNING_ON ){
       bitWrite(signalDescriber, DESCRIPTION_ON_OFF , 1);   // We use this position to remember if this is an ON/OFF signal.
@@ -1181,11 +1133,9 @@ boolean writeSignalToEeprom()
     }else {
       spaceNeeded = spaceNeeded + repeatingSignalByteLength;
     }
-
     // SIMPLE OR REPLAY? If it's simple, then all additional description bits can stay at 0.
     if( state == COPYING_ON || state == COPYING_SIMPLE ){
-      bitWrite(signalDescriber, DESCRIPTION_REPLAYABLE , 1); // We use this position to remember if this is a recognise-only signal(0), or if it's a signal that can be replayed(1).
-      
+      bitWrite(signalDescriber, DESCRIPTION_REPLAYABLE , 1); // We use this position to remember if this is a recognise-only signal(0), or if it's a signal that can be replayed(1). 
       if( metaData[2] == metaData[1] && metaData[3] == metaData[0] ){
         //Serial.println(F("A duo can be reconstructed. Duo 2 is the mirror image of duo 1."));
         spaceNeeded = spaceNeeded + 2;
@@ -1200,7 +1150,6 @@ boolean writeSignalToEeprom()
         bitWrite(signalDescriber, DESCRIPTION_UNRECONSTRUCTABLE_DUO , 1); // We use this position to remember if a duo can be reconstructed (0) or not (1).
         spaceNeeded = spaceNeeded + 4;
       }
-
       // ANOMALY?
       if( metaData[4] != 0 && metaData[5] != 0 ){
         bitWrite(signalDescriber, DESCRIPTION_ANOMALY , 1); // We use this position to remember that there is at least one part anomaly.
@@ -1210,7 +1159,6 @@ boolean writeSignalToEeprom()
           spaceNeeded = spaceNeeded + 2;
         }
       }
-    
 #ifdef DEBUG
       Serial.print(F("Signal description byte (")); Serial.println(signalDescriber);
       for (byte i = 0; i < 8; i++) {
@@ -1221,11 +1169,9 @@ boolean writeSignalToEeprom()
 #endif
     }
   } // End of check if we're storing a single or double signal.
-
   if( positionOfLastSignalEnd + spaceNeeded < EEPROM.length() ){ // If there is enough space to store the new signal. E2END+1 would also work instead of EEPROM.length();
     //Serial.println(F("Enough space left"));
     if( state != COPYING_OFF && state != LEARNING_OFF ){
-
       // Storing a new signal. Moving pointer to the next free space in the EEPROM.
       positionOfLastSignalEnd++;
       EEPROM.update(positionOfLastSignalEnd, spaceNeeded); // Here we store the length of all the data associated with this recording session.
@@ -1233,7 +1179,6 @@ boolean writeSignalToEeprom()
       positionOfLastSignalEnd++;
       EEPROM.update(positionOfLastSignalEnd, signalDescriber); // Here we store the signal describer which holds all the settings needed to recreate this signal.
       //Serial.print(positionOfLastSignalEnd); Serial.print(F(" ~~> "));Serial.println(signalDescriber);
-  
       /*
       Here we store the metaData array. This is how this loop works:
       0 -> bit4 (if replaying) -> metadata 1&2 must be stored
@@ -1242,7 +1187,7 @@ boolean writeSignalToEeprom()
       3 -> bit7 (if second part anomaly exists) -> metadata 7&8 must be stored.
       */
       if( bitRead(signalDescriber, DESCRIPTION_REPLAYABLE) == 1 ){ // If we want to be able to replay this signal, then we should store the meta data.
-        for (byte i = 0; i < 4; i++) {              // Looping over the signalDescriber and the metaData array at the same time.
+        for( byte i = 0; i < 4; i++ ){              // Looping over the signalDescriber and the metaData array at the same time.
           if( bitRead(signalDescriber, i+4) == 1 ){ // 4, 5, 6, 7
             positionOfLastSignalEnd++;
             EEPROM.update(positionOfLastSignalEnd, metaData[i*2]);
@@ -1258,13 +1203,11 @@ boolean writeSignalToEeprom()
         }
       }
     }                                               // End of check if this is part two of an on/off signal.    
-    
     // Add the repeating part of the signal to the storage.
     for( byte i = 0; i < repeatingSignalByteLength; i++ ){
       positionOfLastSignalEnd++;
       Serial.print(positionOfLastSignalEnd); Serial.print(F(" ~~> "));Serial.println(timings[i]);
       EEPROM.update(positionOfLastSignalEnd, timings[i]);
-      
     }
     if( state != COPYING_OFF && state != LEARNING_OFF ){
       amountOfStoredSignals++;                      // On/off signals only count as one because they would be attached to one button.
@@ -1286,11 +1229,11 @@ boolean writeSignalToEeprom()
 
 void replay(byte signalNumber)
 {
+  state = REPLAYING;
   buttonPressed = signalNumber;
-  Serial.print(F("__replaying_")); Serial.print(buttonPressed);
+  Serial.print(F("__replaying_")); Serial.println(buttonPressed);
   repeatingPatternLength = 0;
   if( signalNumber == 0 ){ return; }                // We cannot play signal 0. Just a (superfluous) safeguard.
-
   byte storedSignalLength = scanEeprom();
   if( storedSignalLength == 0 ){
     //Serial.println(F("No signal to replay stored yet!"));
@@ -1298,17 +1241,13 @@ void replay(byte signalNumber)
   }
   else{
     updateDisplay(REPLAYING);
-
     for( byte i = 0; i < 8; i++ ){
       metaData[i] = 0;                              // Reset all metadata values.
     }
-
     byte eepromReadPosition = 4;                    // Where in the eeprom signal we are reading back the data.
     byte restoredSignalLength = 0;                  // pointer to where in the timings array the signal has been reconstructed.
     byte signalDescription = EEPROM.read(startPosition+1);
     lastByteIsSplit = bitRead(signalDescription, DESCRIPTION_HALFBYTE);
-
-
 #ifdef DEBUG
     Serial.println(F("Data from EEPROM (length: ")); Serial.println(storedSignalLength);
     for( int i = startPosition; i <= endPosition; i++ ){              
@@ -1324,12 +1263,9 @@ void replay(byte signalNumber)
       oled.print(buttonsToggleStatus[signalNumber] + 1);
     }
 #endif
-    
     repeatingPatternLength = storedSignalLength - 4;// This indicates how many of the bytes in the eeprom describe the actual repeating signal.
-
     metaData[0] = EEPROM.read( startPosition + 2 ); // These are always reconstructed.
     metaData[1] = EEPROM.read( startPosition + 3 );
- 
     if( bitRead(signalDescription,DESCRIPTION_UNRECONSTRUCTABLE_DUO) == 0 ){  // A duo must be reconstructed.
       if( bitRead(signalDescription,DESCRIPTION_UNRECONSTRUCTABLE_DUO) == 0 ){  // The second duo is a mirror image of the first duo.
         metaData[2] = metaData[1];
@@ -1345,11 +1281,8 @@ void replay(byte signalNumber)
       eepromReadPosition++;
       metaData[3] = EEPROM.read( startPosition + 5 );
       repeatingPatternLength = repeatingPatternLength - 2;
-      
     }
-
     // The anomaly can be placed directly into the timings array.
-
     if( bitRead(signalDescription,DESCRIPTION_ANOMALY) == 1 ){ // Reconstruct part 1 of anomaly.
       eepromReadPosition++;
       timings[restoredSignalLength] = EEPROM.read( startPosition + eepromReadPosition );
@@ -1358,8 +1291,7 @@ void replay(byte signalNumber)
       timings[restoredSignalLength] = EEPROM.read( startPosition + eepromReadPosition );
       restoredSignalLength++;
       repeatingPatternLength = repeatingPatternLength - 2;
-    }    
-
+    }
     if( bitRead(signalDescription,DESCRIPTION_LARGE_ANOMALY) == 1 ){ // Reconstruct part 2 of anomaly.
       eepromReadPosition++;
       timings[restoredSignalLength] = EEPROM.read( startPosition + eepromReadPosition );
@@ -1369,7 +1301,6 @@ void replay(byte signalNumber)
       restoredSignalLength++;
       repeatingPatternLength = repeatingPatternLength - 2;
     }
-
 #ifdef DEBUGGING
     Serial.println(F("Reconstructed betweenSpace anomaly: "));
     for( byte w = 0; w < 4; w++ ){
@@ -1380,14 +1311,11 @@ void replay(byte signalNumber)
       Serial.println(metaData[w]);
     }
 #endif
-
     if( bitRead(signalDescription, DESCRIPTION_ON_OFF) ){ // If it's an of+off signal then the repeating part should be cut in half to get the actual length, since they are stored back to back.
       repeatingPatternLength = repeatingPatternLength / 2;
     }
-
     // Looping over the EEPROM, with some special construction that switches which signal should be reconstructed based on the toggle state of the button.
     for( int i = (endPosition - repeatingPatternLength * (1+buttonsToggleStatus[signalNumber])) + 1; i <= endPosition - (repeatingPatternLength * buttonsToggleStatus[signalNumber]); i++ ){              
-
       // Here we can reconstruct the original signal.
       Serial.print(F(" byte ")); Serial.print(i);Serial.print(F(" = ")); Serial.println( EEPROM.read(i) );
       for (byte j = 0; j < 8; j++) {
@@ -1401,21 +1329,18 @@ void replay(byte signalNumber)
       }
       Serial.println();
     }
-
     // If the last byte is only half used, then we should not transmit the last half byte.
     if( lastByteIsSplit ){
       restoredSignalLength = restoredSignalLength - 8;
     }
-
     // We only change the value in the toggle array if this is an on/off signal.
     if( bitRead(signalDescription,DESCRIPTION_ON_OFF) == 1 ){
-      buttonsToggleStatus[signalNumber] = !buttonsToggleStatus[signalNumber]; // toggle the value in the array.
+      buttonsToggleStatus[signalNumber] = !buttonsToggleStatus[signalNumber]; // Toggle the value in the array.
       //Serial.print(F(" changed value in toggle array to: ")); Serial.println(buttonsToggleStatus[signalNumber]);
     }
-
     // Finally, play the new timing a few times.
     for( int j = 0; j < restoredSignalLength; j++ ){
-      Serial.println( timings[j] );
+      //Serial.println( timings[j] );
     }
     for( byte i = 0; i < 6; i++ ){                  // Sending the pattern 6 times.
       boolean high = false;
@@ -1457,14 +1382,13 @@ void replay(byte signalNumber)
     //Serial.println(F("Done replaying"));
   }                                                 // End of check if at least one signal is stored in the EEPROM.
   send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Replayed a signal") )); wait(RADIO_DELAY);
+  state = LISTENING;
 }                                                   // End of replay function
 
 
-
-
-
-
-
+//
+//  UPDATE DISPLAY
+//
 
 void updateDisplay(byte currentStatus)              // Show info on the display
 {
@@ -1594,26 +1518,21 @@ byte showMenu()                                     // Lets the user select whic
   wait(100);
 
   while( stayInMenu ){
-
 #if KEYPAD_BUTTON_COUNT == 4
     buttonPressed = keypad4();
 #else if KEYPAD_BUTTON_COUNT == 12
     buttonPressed = keypad12();
 #endif
-    
     //buttonPressed = (byte)constrain(map2(analogRead(KEYPAD_PIN), KEYPAD_OFFSET, 1024, 0, KEYPAD_BUTTON_COUNT), 0 , KEYPAD_BUTTON_COUNT);        
     wait(100);
-    
     if(buttonPressed != prevButtonState){
       Serial.print(F("[] button pressed: ")); Serial.println(buttonPressed);
-
       if( buttonPressed == KEYPAD_BUTTON_COUNT - 1 ){ // User has pressed the change button.
         menuPosition++;
         if( menuPosition > menuItems + 1 ){ menuPosition = 2; } // If necessary, loop around back to the top item in the menu.
         Serial.print(F("changed to ")); Serial.println(menuPosition);
       }
       else if( buttonPressed == KEYPAD_BUTTON_COUNT ){ // User has pressed the menu/ok button.
-        
         Serial.print(F("select!")); Serial.println(menuPosition);
         if( menuPosition == 2 ){                    // User pressed cancel. This could move the user back to the main menu, but for simplicity, this currently just exits the menu.
           state = 255;
@@ -1635,7 +1554,6 @@ byte showMenu()                                     // Lets the user select whic
         oled.set2X(); 
         oled.setCursor(0,0);
         oled.print(F("MENU"));
-        
         oled.set1X(); 
         oled.setCursor(8,2);
         oled.print(F("CANCEL"));
@@ -1691,18 +1609,33 @@ void receive(const MyMessage &message)
   if( message.type==V_STATUS ){
     Serial.print("-Requested status: "); Serial.println(message.getBool());
 
-    if( (message.sensor == LEARN_SIMPLE_BTN_ID || message.sensor == COPYING_SIMPLE_BTN_ID) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
-      send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Please play the signal") )); wait(RADIO_DELAY);
+    if( message.sensor < 10 ){
+      updateDisplay(REPLAYING);
     }
-    else if( (message.sensor == LEARN_ON_OFF_BTN_ID || message.sensor == COPYING_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
+    
+    if( (message.sensor == LEARN_SIMPLE_BTN_ID ) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
+      send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Please play the signal") )); wait(RADIO_DELAY);
+      state = LEARNING_SIMPLE;
+    }
+    else if( (message.sensor == LEARN_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
       send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); wait(RADIO_DELAY);
+      state = LEARNING_ON;
+    }
+    if( (message.sensor == COPYING_SIMPLE_BTN_ID) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
+      send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Please play the signal") )); wait(RADIO_DELAY);
+      state = COPYING_SIMPLE;
+    }
+    else if( (message.sensor == COPYING_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
+      send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); wait(RADIO_DELAY);
+      state = COPYING_ON;
     }
     else if( message.sensor >= 100 ){ // If the user toggled a signal replay button.
-      if( buttonsToggleStatus[message.sensor - 100] != message.getBool() ){
+      if( buttonsToggleStatus[message.sensor - 99] != message.getBool() ){
         Serial.println("-Replaying signal!");
-        replay(message.sensor - 100);
+        replay(message.sensor - 99);
       }
     }
+    updateDisplay(state);
   }
 }
 
@@ -1726,7 +1659,7 @@ void clearTimingsArray()
 #ifdef DEBUG
   Serial.print(F("__Clearing_timings\n-state:")); Serial.println(state);
 #endif
-  memset(timings,0,sizeof(timings));                // write 0's to timings array.
+  memset(timings,0,sizeof(timings));                // Write 0's to timings array.
   startPosition = 0;
   endPosition = MAXEDGES - 1; //sizeof(timings) - 1;
   repeatingPatternLength = 255;
@@ -1743,7 +1676,6 @@ void clearTimingsArray()
 void displayNetworkStatus()                         // Show connection icon on the display
 {
 #ifdef HAS_SCREEN
-
   oled.set1X();
   oled.setCursor(122,0);
   if( connectedToNetwork ){
