@@ -902,7 +902,6 @@ boolean signalCleaner()
   printRawSignal();
 #endif
   if( betweenSpace == 250 ){                        // 250 is the default. This means the previous function did not find a between-space indicator. Time to bring in the pattern finder.
-    return false;
 #ifdef PATTERN_FINDER
     if( findPattern() ){                            // The pattern finder uses the 'brute force method' to detect a repeating pattern in the signal.
       return true;
@@ -910,6 +909,8 @@ boolean signalCleaner()
     else{                                           // Even the pattern matcher couldn't find a repeating part in the timings data.  
       return false;                                 // Signal analysis is impossible.
     }
+#else
+    return false;
 #endif
   }
   else{
