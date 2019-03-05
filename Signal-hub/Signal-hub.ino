@@ -3,9 +3,9 @@
 
 /*
  *
- * 433 Hub
+ * Signal Hub
  * 
- * This device can copy signals from wireless remote controls that use the 433 frequency, and then rebroadcast them. It can do this in three ways:
+ * This device can copy signals from wireless remote controls that use the 433 frequency (or use infrared), and then rebroadcast them. It can do this in three ways:
  * - Copy and replay ON and OFF signals. For example, from cheap wireless power switches. It basically copies remote controls.
  * - Copy and then replay a single signal. For example, to emulate a window sensor.
  * - Recognise signals without replaying them. For example, After learning the signal once, it can detect when a window sensor is triggered again. Or when a button on a remote control is pressed.
