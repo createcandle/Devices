@@ -91,6 +91,15 @@
 //
 
 //#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
+//#define DEBUG_SCREEN                              // Do you want to see extra debugging information about the touch screen in the serial output?
+
+// Receiver and transmitter pins
+#define RECEIVER 3                                  // The pin where the receiver is connected.
+#define TRANSMITTER 4                               // The pin where the transmitter is connected.
+
+#define TOUCH_SCREEN_RX_PIN 7                       // The receive (RX) pin for the touchscreen. This connects to the transmit (TX) pin of the touchscreen.
+#define TOUCH_SCREEN_TX_PIN 8                       // The receive (TX) pin for the touchscreen. This connects to the transmit (RX) pin of the touchscreen.
+
 
 // This code has an extra pattern finding trick. Using brute force it will try to find a pattern in the data. The downside is it takes a lot of time to analyse signals this way. 
 // This means the system might not detect a signal because it is busy analysing a bad signal. It's up to you if you want to use it.
@@ -145,7 +154,7 @@ SSD1306AsciiAvrI2c oled;
 #ifdef HAS_TOUCH_SCREEN
 
 #include <SoftwareSerial.h>
-SoftwareSerial mySerial(7,8);                       // RX (receive) pin, TX (transmit) pin
+SoftwareSerial mySerial(TOUCH_SCREEN_RX_PIN,TOUCH_SCREEN_TX_PIN);                       // RX (receive) pin, TX (transmit) pin
 
 #define MAX_BASIC_COMMAND_LENGTH 16                 // How many bytes are in the longest basic command?
 #define TOUCHSCREEN_WIDTH 240
@@ -179,7 +188,8 @@ PROGMEM const byte text_color_white[] = {0x04, 0x02, 0xFF, 0xFF, 0xEF,}; // whit
 
 //PROGMEM const byte resetTFT[] =         {0x02, 0x05, 0xEF,}; // Resets the TFT. But has no real effect.
 //PROGMEM const byte testTFT[] =          {0x02, 0x00, 0xEF,}; // Test the TFT, should respond with "OK".
-//PROGMEM const byte backlight[] =        {0x03, 0x06}; // Backlight intensity
+PROGMEM const byte backlight_on[] =     {0x03, 0x06, 0xFF,0xEF}; // Backlight intensity to full
+PROGMEM const byte backlight_off[] =    {0x03, 0x06, 0x00,0xEF}; // Backlight intensity to zero
 //PROGMEM const byte serialSpeedUp[] =    {0x03, 0x40, 0x03, 0xEF,}; // Sets communication speed to 57600 (from 9600)
 //PROGMEM const byte serialSlowDown[] =   {0x03, 0x40, 0x00, 0xEF,}; // Sets communication speed to 9600 again. Oddly enough, it seems it works fastest at this speed..
 
@@ -210,11 +220,6 @@ byte prevButtonState = 100;
 #if KEYPAD_BUTTON_COUNT > 0
 boolean buttonsToggleStatus[KEYPAD_BUTTON_COUNT + 1];  // Array to hold the buttons' toggle status (if the button has an on/off signal). For simple signals buttonsToggleStatus[x] is always 0. For on/off signals this actually switches between 0 and 1. For simplicity, the zero position of the array is ignored.
 #endif
-
-
-// Receiver and transmitter pins
-#define RECEIVER 3                                  // The pin where the receiver is connected.
-#define TRANSMITTER 6                               // The pin where the transmitter is connected.
 
 
 // SIGNAL CLONING
@@ -271,8 +276,7 @@ boolean captureFinished = false;                    // If the entire edges array
 byte bucketCount = 0;                               // How many different types of timings are there in the signal. This is used to tighten up the signal.
 boolean connectedToNetwork = false;                 // Are we connected to the local MySensors network? Used to display the 'w' connection icon.
 byte lengthOfSignalWeAreWaitingFor = 3;             // Used when recording on-off signals. The off-signal should have the same byte length as the on signal.     
-
-
+byte brightnessTimer = 255;                         // When this reaches 0 the screen is turned off.
 // DESCRIPTION BIT STATES
 
 #define DESCRIPTION_HALFBYTE 0
@@ -650,11 +654,22 @@ void loop()
     if( millis() - lastLoopTime > 100 ){
       lastLoopTime = millis();
 
+      // Turn screen off after a while
+      if( brightnessTimer > 1){
+        brightnessTimer--;
+      }
+      else if( brightnessTimer == 1 ){
+        brightnessTimer = 0;
+        basicCommand(backlight_off);                // Set the screen to vertical mode.
+      }
+      
+      
 #ifdef HAS_TOUCH_SCREEN
       if( touched ){
+        brightnessTimer = 255;
         //Serial.println(F("TOUCH"));
         buttonPressed = touchScreenButtonPress();   // Check what part of the touchscreen was pressed.
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
         drawPix(touchX,touchY, 0);                  // Draw a pixel where the user touched the screen.
 #endif
         touched = false;
@@ -735,7 +750,7 @@ void loop()
 
 boolean signalViabilityCheck()
 {
-#ifdef debug
+#ifdef DEBUG
   Serial.println(F("__Viability check"));
   printRawSignal();
 #endif
@@ -905,12 +920,12 @@ boolean signalCleaner()
 #ifdef DEBUG
   printRawSignal();
 #endif
-  if( betweenSpace == 250 ){                        // 250 is the default. This means the previous function did not find a between-space indicator. Time to bring in the pattern finder.
-#ifdef PATTERN_FINDER
-    if( findPattern() ){                            // The pattern finder uses the 'brute force method' to detect a repeating pattern in the signal.
-      return true;
+  if( betweenSpace == 250 ){                        // 250 is the default value. This means the previous function did not find a between-space indicator. Time to bring in the pattern finder.
+    if( state > MENU_NEW && state < MENU_DELETE_LAST ){
+      if( findPattern() ){                          // The pattern finder is our last hope. It uses the 'brute force method' to search for a repeating pattern in the signal. It can find repeating patterns when the signal does not have spaces between the repeating parts.
+        return true;
+      }
     }
-#endif
     return false;                                   // Signal analysis is impossible.
   }
   else{
@@ -1125,7 +1140,6 @@ boolean signalAnalysis()
 //
 //  Finds repeating patterns in the signal data. This is a backup function. Some signals don't have a betweenSpace. In those cases we use brute force to look for the longest repeating pattern we can find. This function takes longer.
 
-#ifdef PATTERN_FINDER
 boolean findPattern()
 {
     Serial.println(F("___pattern_finder___"));     
@@ -1179,7 +1193,7 @@ boolean findPattern()
   //Serial.println(F("Pattern finder failed"));
   return false;                                     // We reached the end without finding any repeating pattern.
 }
-#endif
+
 
 //
 //  SCAN EEPROM
@@ -1594,7 +1608,9 @@ void replay(byte signalNumber, boolean onOrOff)
     }
     // If the last byte is only half used, then we should not transmit the last half byte.
     if( lastByteIsSplit ){
+#ifdef DEBUG
       Serial.println(F("last byte is split"));
+#endif
       restoredSignalLength = restoredSignalLength - 8; // Since the last 4 bits of the byte didn't actually contain valid data, we 'cut it off' from the part that we will transmit.
     }
 
@@ -1608,20 +1624,19 @@ void replay(byte signalNumber, boolean onOrOff)
         restoredSignalLength = restoredSignalLength - 2;
       }
     }
-    
+#ifdef DEBUG
     Serial.print(F(">> restoredSignalLength ")); Serial.println(restoredSignalLength); Serial.println();
+#endif
+
     
-    // Finally, play the new timing a few times.
     for( int j = 0; j < restoredSignalLength; j++ ){
       Serial.print( timings[j] ); Serial.print(F(","));
       if( j % 4 == 3 ){ Serial.println(); }
       if( j % 32 == 31 ){ Serial.println(); }
     }
     
-
-#ifdef DEBUG
+    // Finally, play the new timing a few times.
     Serial.println(F("REPLAYING"));
-#endif
     for( byte i = 0; i < 8; i++ ){                  // Sending the pattern a few times.
       boolean high = false;
       for( int j = 0; j < restoredSignalLength; j++ ){
@@ -1639,10 +1654,10 @@ void replay(byte signalNumber, boolean onOrOff)
     }
 
     digitalWrite(TRANSMITTER, LOW);                 // Just to be safe
-    wait(400);
+    wait(300);
 
 #ifdef DEBUG    
-    wait(1000);
+    wait(300);
     Serial.println(F("NOW REPLAYING REVERSED"));
 #endif
 
@@ -1895,7 +1910,6 @@ byte showMenu()                                     // Lets the user select whic
   //}
   boolean stayInMenu = true;                        // We stay in the menu while this is true
   
-  
 #ifdef HAS_TOUCH_SCREEN
   byte menuOffset = 0;
   byte menuItems = 4;
@@ -1903,7 +1917,7 @@ byte showMenu()                                     // Lets the user select whic
   clearReceivedBuffer();
   touchY = TOUCHSCREEN_HEIGHT;
   touched = true;
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
   Serial.println( mySerial.available() );
 #endif
 
@@ -1926,9 +1940,8 @@ byte showMenu()                                     // Lets the user select whic
         break;
       }
       else {
-        basicCommand(fill_blue);
-        //delay(50);
-        setCur(BUTTON_PADDING,BUTTON_PADDING);
+        basicCommand(fill_blue);                    // Set the background color to blue
+        setCur(BUTTON_PADDING,BUTTON_PADDING);      // Set the text cursor at the top left of the screen
         writeText(0);                               // Display the Cancel item. All menu's have it.
         simpleHorizontal(BUTTON_HEIGHT);
         
@@ -2213,7 +2226,6 @@ byte keypad12()
 
 #ifdef HAS_TOUCH_SCREEN
 
-
 byte touchScreenButtonPress()
 {
   clearReceivedBuffer();
@@ -2246,7 +2258,7 @@ void showTouchButtons()
 void simpleHorizontal(int y)                        // Draw a horizontal line on the screen.
 {
   //Serial.println(F("SIMPLEHORIZONTAL:"));
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
   Serial.print(F("y: ")); Serial.println(y);
 #endif
   byte command[12] = {0x7E, 0x0A, 0x23, 0,0, highByte(y), lowByte(y), 0,240, 255, 255, 0xEF,};
@@ -2261,7 +2273,7 @@ void simpleHorizontal(int y)                        // Draw a horizontal line on
 void roundedRectangle(int x, int y, int w, int h, int r, int c) // Draw a pixel on the screen.
 {
   
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
   Serial.println(F("ROUNDEDRECTANGLE"));
   //Serial.print(F("x:")); Serial.println(x);       // top-right x-position
   //Serial.print(F("y:")); Serial.println(y);       // top-left y-position
@@ -2284,8 +2296,9 @@ void roundedRectangle(int x, int y, int w, int h, int r, int c) // Draw a pixel 
 // This function writes text to the screen. You can use the setCur function to place the cursor in the desired position first.
 void writeText(byte textID)
 {
-  //Serial.println(F("WRITETEXT"));
-
+#ifdef DEBUG_SCREEN
+  Serial.println(F("WRITETEXT"));
+#endif
   byte j = 0;
   byte c = 0;
   byte stringLength = strlen_P(MessageTable[textID].Description);
@@ -2307,7 +2320,7 @@ void writeText(byte textID)
   }
 }
 
-//#ifdef DEBUG
+#ifdef DEBUG_SCREEN
 void drawPix(int x, int y, int c) // Draw a pixel on the screen.
 {
   Serial.println(F("DRAWPIX:"));
@@ -2321,14 +2334,14 @@ void drawPix(int x, int y, int c) // Draw a pixel on the screen.
   }
   waitForResponse(5);
 }
-//#endif
+#endif
 
 
 // This function places the text cursor anywhere on the screen.
 void setCur(int x, int y)
 {
   //Serial.println(F("SETCUR"));
-#ifdef DEBUG  
+#ifdef DEBUG_SCREEN  
   Serial.print(F("x: ")); Serial.println(x);
   Serial.print(F("y: ")); Serial.println(y);
 #endif
@@ -2364,13 +2377,13 @@ void readResponse()
   }
   boolean savingMessage = false;
   //byte metaData[metadataArraySize];               // An array to store the received serial data // TODO: use the metadata array instead. It's just as long, and their uses don't overlap.
-  byte metaDataPosition = 0;
+  byte metaDataPosition = 0;                        // The metaData array is recycled: here is holds incoming serial data.
   byte startMarker = 0x7E;                          // Any response from the screen will start with this.
   byte endMarker = 0xEF;                            // Any response from the screen will end with this.
   byte rc;                                          // Hold the byte form the serial stream that we're examining.
-  while( mySerial.available() ){ //  && newData == false //  By not checking for this the entire buffer is always cleared.
+  while( mySerial.available() ){                    //  By not checking for this the entire buffer is always cleared.
     rc = mySerial.read();
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
     Serial.print(rc); Serial.print(F(" "));
 #endif
     if( savingMessage == true ){                    // We are now in the part of the response that is the message we were looking for.
@@ -2385,18 +2398,24 @@ void readResponse()
         metaData[metaDataPosition] = '\0';          // Terminate the string.
         savingMessage = false;
         metaDataPosition = 0;
-        //Serial.println(F("(endmarker)"));
         if(metaData[metaDataPosition] == 0x06 && metaData[metaDataPosition + 1] == 0x07){
           touchX = touchToX( (metaData[metaDataPosition + 2] * 256) + metaData[metaDataPosition + 3] );
           touchY = touchToY( (metaData[metaDataPosition + 4] * 256) + metaData[metaDataPosition + 5] );
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
           Serial.print(F("touchX=")); Serial.println(touchX);
           Serial.print(F("touchY=")); Serial.println(touchY);
 #endif
-          touched = true;                           // To indicate that a touch event has just occured.
+
+          if( brightnessTimer == 0 ){
+            basicCommand(backlight_on);                // Set the screen to vertical mode.
+          }
+          else{
+            touched = true;                           // To indicate that a touch event has just occured.
+          }
+          brightnessTimer = 255;
           clearReceivedBuffer();
         }
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
         // OK message
         else if( metaData[metaDataPosition] == 0x03 && metaData[metaDataPosition + 1] == 0x6F && metaData[metaDataPosition + 2] == 0x6B ){
           Serial.println(F("-OK"));
@@ -2451,7 +2470,7 @@ void waitForResponse(byte expectedBytes)
     b++;
     delay(1);
   }
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
   Serial.print(F("wait time: ")); Serial.println(b);
 #endif  
   delay(10);                                        // A small extra delay seems to be required.
