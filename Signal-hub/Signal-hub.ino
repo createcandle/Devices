@@ -3,9 +3,11 @@
 
 /*
  *
- * 433 Hub
+ * Signal Hub
  * 
- * This device can copy signals from wireless remote controls that use the 433 frequency, and then rebroadcast them. It can do this in three ways:
+ * This device can copy signals from wireless remote controls that use the 433 frequency, and then rebroadcast them. It can optionally also copy Infra red (IR) signals.
+ * 
+ * It can do this in three ways:
  * - Copy and replay ON and OFF signals. For example, from cheap wireless power switches. It basically copies remote controls.
  * - Copy and then replay a single signal. For example, to emulate a window sensor.
  * - Recognise signals without replaying them. For example, After learning the signal once, it can detect when a window sensor is triggered again. Or when a button on a remote control is pressed.
@@ -106,7 +108,7 @@
 //#define PATTERN_FINDER
 
 
-// #define MY_DEBUG                                 // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
+#define MY_DEBUG                                 // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 // Enable and select the attached radio type
 #define MY_RADIO_RF24                               // This is a common and simple radio used with MySensors. Downside is that it uses the same frequency space as WiFi.
@@ -116,8 +118,8 @@
 
 // MySensors: Choose your desired radio power level. High power can cause issues on cheap Chinese NRF24 radio's.
 //#define MY_RF24_PA_LEVEL RF24_PA_MIN
-//#define MY_RF24_PA_LEVEL RF24_PA_LOW
-#define MY_RF24_PA_LEVEL RF24_PA_HIGH
+#define MY_RF24_PA_LEVEL RF24_PA_LOW
+//#define MY_RF24_PA_LEVEL RF24_PA_HIGH
 //#define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors security
@@ -188,11 +190,14 @@ PROGMEM const byte text_color_white[] = {0x04, 0x02, 0xFF, 0xFF, 0xEF,}; // whit
 
 //PROGMEM const byte resetTFT[] =         {0x02, 0x05, 0xEF,}; // Resets the TFT. But has no real effect.
 //PROGMEM const byte testTFT[] =          {0x02, 0x00, 0xEF,}; // Test the TFT, should respond with "OK".
-PROGMEM const byte backlight_on[] =     {0x03, 0x06, 0xFF,0xEF}; // Backlight intensity to full
-PROGMEM const byte backlight_off[] =    {0x03, 0x06, 0x00,0xEF}; // Backlight intensity to zero
+PROGMEM const byte backlight_on[] =     {0x03, 0x06, 0x60, 0xEF}; // Backlight intensity to half-full
+PROGMEM const byte backlight_off[] =    {0x03, 0x06, 0x00, 0xEF}; // Backlight intensity to zero
 //PROGMEM const byte serialSpeedUp[] =    {0x03, 0x40, 0x03, 0xEF,}; // Sets communication speed to 57600 (from 9600)
 //PROGMEM const byte serialSlowDown[] =   {0x03, 0x40, 0x00, 0xEF,}; // Sets communication speed to 9600 again. Oddly enough, it seems it works fastest at this speed..
 
+
+PROGMEM const char detectedMessage[] = { "Detected  " }; // This construction saves some memory.
+PROGMEM const char replayMessage[]   = { "Replay    " }; // This construction saves some memory.
 
 /* 
 The colors use this RGB565 format:
@@ -383,7 +388,7 @@ const MessageDef MessageTable[] PROGMEM = {
 
 // MYSENSORS
 
-#define RADIO_DELAY 100                             // Milliseconds between sending radio signals. This keeps the radio happy.
+#define RADIO_DELAY 400                             // Milliseconds between sending radio signals. This keeps the radio happy.
 #define DEVICE_STATUS_ID 1                          // The first 'child' of this device is a text field that contains status updates.
 #define LISTENER_OUTPUT_ID 2                        // The first 'child' of this device is a text field that contains status updates.
 
@@ -393,7 +398,7 @@ const MessageDef MessageTable[] PROGMEM = {
 #define COPYING_SIMPLE_BTN_ID 5                     // Learn to replay a single signal.
 #define COPYING_ON_OFF_BTN_ID 6                     // Learn to replay an ON and an OFF signal that belong together.
 
-MyMessage textMessage(DEVICE_STATUS_ID, V_TEXT);    // Sets up the message format that we'll be sending to the MySensors gateway later. In this case it's a text variable. The first part is the ID of the specific sensor module on this node. The second part tells the gateway what kind of data to expect.
+MyMessage textmsg(DEVICE_STATUS_ID, V_TEXT);    // Sets up the message format that we'll be sending to the MySensors gateway later. In this case it's a text variable. The first part is the ID of the specific sensor module on this node. The second part tells the gateway what kind of data to expect.
 MyMessage buttonmsg(LEARN_SIMPLE_BTN_ID, V_STATUS); // The message for replayable signals' buttons. This is an on/off message.
 MyMessage detectmsg(10, V_TRIPPED);                 // The message for detect-only signals. This is an on/off message.
 
@@ -403,13 +408,15 @@ static unsigned long lastLoopTime = 0;              // Holds the last time the m
 
 void presentation()
 { 
-  sendSketchInfo(F("433 Hub"), F("1.0"));           // Sends the sketch version information to the gateway and Controller
-  present(DEVICE_STATUS_ID, S_INFO, F("Device status")); wait(RADIO_DELAY);  // Child 1. This outputs general status details.
-  present(LISTENER_OUTPUT_ID, S_INFO, F("Detected codes")); wait(RADIO_DELAY); // Child 2. This outputs the ID of detected signals that were matched to signals in eeprom.
+  sendSketchInfo(F("Signal Hub"), F("1.1")); wait(RADIO_DELAY); // Child 0. Sends the sketch version information to the gateway and Controller
+  present(DEVICE_STATUS_ID, S_INFO, F("Device status")); wait(RADIO_DELAY); // Child 1. This outputs general status details.
+  //present(LISTENER_OUTPUT_ID, S_INFO, F("Detected codes")); wait(RADIO_DELAY); // Child 2. This outputs the ID of detected signals that were matched to signals in eeprom.
+#if !(defined(HAS_TOUCH_SCREEN))
   present(LEARN_SIMPLE_BTN_ID, S_BINARY, F("Recognise a single code")); wait(RADIO_DELAY);// Child 3
   present(LEARN_ON_OFF_BTN_ID, S_BINARY, F("Recognise an ON+OFF code")); wait(RADIO_DELAY); // Child 4
   present(COPYING_SIMPLE_BTN_ID, S_BINARY, F("Copy a single code")); wait(RADIO_DELAY); // Child 5
   present(COPYING_ON_OFF_BTN_ID, S_BINARY, F("Copy an ON/OFF code")); wait(RADIO_DELAY); // Child 6
+#endif
 }
 
 
@@ -451,7 +458,7 @@ void setup()
   if(isTransportReady()){
     Serial.println(F("Connected to gateway!"));
     connectedToNetwork = true;
-    send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("433 Hub connected") )); wait(RADIO_DELAY);
+    //send(relaymsg.setSensor(RELAY1_CHILD_ID).set( actualDoorStates[0] )); wait(RADIO_DELAY); // Tell the controller in what state the lock is.
     scanEeprom();                                    // Find out how many signals are stored in memory.
 
 #ifdef DEBUG    
@@ -461,14 +468,24 @@ void setup()
     Serial.println(amountOfStoredReplayableSignals);
 #endif
 
+    char childNameMessage[11];
+    strcpy_P(childNameMessage, detectedMessage);
+    
     // We loop over all the detect-only signals, and present them to the controller. Their Child ID's are between 10 and 99.
     for( byte recognisedID=10; recognisedID < 10 + (amountOfStoredSignals - amountOfStoredReplayableSignals); recognisedID++ ){
-      present(recognisedID, S_DOOR); wait(RADIO_DELAY);
+      Serial.print(F("Detectable child ID ")); Serial.println(recognisedID);
+      childNameMessage[9] = recognisedID + 39; // (recognisedID - 10) + 49;
+      present(recognisedID, S_DOOR, childNameMessage); wait(RADIO_DELAY);
+      send(detectmsg.setSensor(recognisedID).set( 0 )); wait(RADIO_DELAY); // Tell the controller in what state the lock is.
     }
-      
+
+    strcpy_P(childNameMessage, replayMessage);
     // We loop over all the replayable signals, and present them to the controller. Their child ID's are between 100 and 200.
     for( byte replayableID=100; replayableID < 100 + amountOfStoredReplayableSignals; replayableID++ ){
-      present(replayableID, S_BINARY); wait(RADIO_DELAY);
+      Serial.print(F("Replayable child ID ")); Serial.println(replayableID);
+      childNameMessage[7] = (replayableID - 100) + 49;
+      present(replayableID, S_BINARY, childNameMessage); wait(RADIO_DELAY);
+      send(buttonmsg.setSensor(replayableID).set( 0 )); wait(RADIO_DELAY); // Tell the controller in what state the lock is.
     }
   }
   else{
@@ -479,11 +496,14 @@ void setup()
   state = LISTENING;
   updateDisplay(LISTENING);                         // Show "Listening" on the display.
   clearTimingsArray();                              // Reset everything, so that we are ready to listen for a signal.
+
+  basicCommand(backlight_on);
   
 #ifdef DEBUG
   Serial.print(F("Free RAM after setup = ")); Serial.println(freeRam());
 #endif
   
+  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Hi") )); wait(RADIO_DELAY);
 }
  
  
@@ -566,8 +586,9 @@ void loop()
 
     if( validSignal && edges > MINIMAL_SIGNAL_LENGTH * 2 ){ // The timings data is long enough.
 #ifdef DEBUG
-      //Serial.println(F("Received a signal"));
+      //Serial.println(F("Received a signal")); 
       //signalIsOk = false;
+      //printRawSignal();
 #endif
       if( signalViabilityCheck() ){                 // A quick quality check on the signal.
         Serial.println(F("PROCESSING"));
@@ -582,9 +603,11 @@ void loop()
 
             if( state == LISTENING ){               // System received a good signal while in the LISTENING state.
               Serial.println(F("Comparing"));
+              //byte detectedSignalNumber = scanEeprom();
+              //Serial.print(F("DetectedSignalNumber = ")); Serial.println(detectedSignalNumber);
               if( scanEeprom() ){                   // If the signal matches a signal in eeprom, then the scanEeprom function returns its number in eeprom. If there is no match, it returns 0.
                 Serial.println(F("MATCH"));
-                send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Detected a known signal") )); wait(RADIO_DELAY);
+                send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Detected a known signal") )); wait(RADIO_DELAY);
               }
             }
             else if( state > MENU_NEW && state < MENU_DELETE_LAST ){                             // States in which a signal is supposed to be copied to the EEPROM memory.
@@ -604,21 +627,21 @@ void loop()
                   if( state == COPYING_ON || state == LEARNING_ON ){
                     Serial.println(F(" Now play OFF signal"));
                     lengthOfSignalWeAreWaitingFor = repeatingSignalByteLength; // When we record the 'off' signal later, we want it to be the same length.
-                    send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Now play the OFF signal") )); wait(RADIO_DELAY);
+                    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Now play the OFF signal") )); wait(RADIO_DELAY);
                     if( state == COPYING_ON ){ state = COPYING_OFF; } // switch to the next part of the process.
                     if( state == LEARNING_ON ){ state = LEARNING_OFF; } // switch to the next part of the process.
                   }
                   else{
                     updateDisplay(SIGNAL_STORED);
                     Serial.println(F("Finished copying"));
-                    send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Learning went OK") )); wait(RADIO_DELAY);
+                    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Learning went OK") )); wait(RADIO_DELAY);
                     state = LISTENING;
                   }
                 }
                 else{                               // Storing the signal in EEPROM failed.
                   Serial.println(F("Error storing signal"));
                   updateDisplay(OUT_OF_SPACE);
-                  send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Error storing signal") )); wait(RADIO_DELAY);
+                  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Error storing signal") )); wait(RADIO_DELAY);
                   state = LISTENING;
                 }
               }
@@ -666,7 +689,7 @@ void loop()
       
 #ifdef HAS_TOUCH_SCREEN
       if( touched ){
-        brightnessTimer = 255;
+        turnOnScreen();
         //Serial.println(F("TOUCH"));
         buttonPressed = touchScreenButtonPress();   // Check what part of the touchscreen was pressed.
 #ifdef DEBUG_SCREEN
@@ -1215,7 +1238,7 @@ byte scanEeprom()
     byte storedSignalLength = EEPROM.read(positionOfLastSignalEnd + 1); // This get the first byte of the next stored signal (if it exists), and indicates how much data it takes on the eeprom.
     Serial.print(F("#")); Serial.println(amountOfStoredSignals + 1);
     Serial.print(F("-storedlength:"));Serial.println(storedSignalLength);
-    if( storedSignalLength == 0xff || storedSignalLength == 0x00 ){               // No more signals found in the EEPROM.
+    if( storedSignalLength == 0xff || storedSignalLength == 0x00 ){ // No more signals found in the EEPROM.
       finishedScanningEeprom = true;
     }
 
@@ -1287,15 +1310,15 @@ byte scanEeprom()
 #endif
 
       }
-      else{
+      else {
         Serial.println(F("-detectable"));
       }
       // LISTENING
       positionOfLastSignalEnd = positionOfLastSignalEnd + storedSignalLength;
-      if( state == LISTENING && whatWeCameHereFor == 0 && bitRead(descriptionData, DESCRIPTION_REPLAYABLE) == 0 ){ // We only check detect-only signals for now. This could be changed to include all signals (just remove the last check here)
+      if( state == LISTENING && whatWeCameHereFor == 0 && bitRead(descriptionData, DESCRIPTION_REPLAYABLE) == 0 ){ // We only check detect-only signals for now. This could be changed to include all signals by removing the last check in this if statement.
         // We should scan the stored binary data against the last signal we received.
-        boolean areTheyTheSame = true;              // The code below continously tries to disprove that they are the same, and skips ahead at the first evidence that this is the case.
-        for( byte i = 0; i < 1 + bitRead(descriptionData, DESCRIPTION_ON_OFF); i++ ){ // This is a trick to be able to check both the on and off signals.
+        boolean areTheyTheSame = true;            // The code below continously tries to disprove that they are the same, and skips ahead at the first evidence that this is the case.
+        for( byte i = 0; i < 1 + bitRead(descriptionData, DESCRIPTION_ON_OFF); i++ ){ // Check both the on and off signals.
           areTheyTheSame = true;
           for( byte j = 0; j < repeatingSignalByteLength; j++ ){
             if( timings[(repeatingSignalByteLength - j) - 1] != EEPROM.read((positionOfLastSignalEnd - (repeatingSignalByteLength*i)) - j ) ){
@@ -1303,19 +1326,27 @@ byte scanEeprom()
               break;
             }
           }
-          if( areTheyTheSame == true ){             // We've compared the entire signal, and.. they are the same!
+          if( areTheyTheSame == true ){           // We've compared the entire signal, and.. they are the same!
+            Serial.println(F("Match"));
             Serial.print(F("SEND: Toggle ")); Serial.print(10 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)); Serial.print(F(" to ")); Serial.println(i);
-            connectedToNetwork = send(detectmsg.setSensor(10 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(!i),1); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
-            break;                                  // Just in case that this is a double signal, then we don't want a second loop to overrule this result.
+            
+            if( bitRead(descriptionData, DESCRIPTION_ON_OFF) ){ // This is an on-off type detection, so we just toggle it to the correct position.
+              connectedToNetwork = send(detectmsg.setSensor(10 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(!i),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
+
+            }
+            else{                                 // This is a simple trigger-type detection.
+              connectedToNetwork = send(detectmsg.setSensor(10 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(1),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
+              wait(1000);
+              send(detectmsg.setSensor(10 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(0),1); wait(RADIO_DELAY); // ... and turn if back off again at the controller.
+            }
+            updateDisplay(MATCH);
+            whatWeCameHereFor = amountOfStoredSignals; // Sending back the index of this signal. 
+            
+            break;                                // Just in case that this is a double signal, then we don't want a second loop to overrule this result.
           }
         }
-        if( areTheyTheSame == true ){               // We've compared the entire signal, and.. they are the same!
-          Serial.println(F("Match"));
-          updateDisplay(MATCH);
-          whatWeCameHereFor = amountOfStoredSignals;// Sending back the index of this signal. 
-        }
-      }
-    }                                               // end of checking a stored signal.
+      } // end of detectable
+    } // end of 'is a signal'                     // end of checking a stored signal.
   }                                                 // end of while loop, so the entire EEPROM has now been scanned.
   amountOfStoredReplayableSignals = amountOfStoredReplayableSignalsScan;
   return whatWeCameHereFor;
@@ -1476,7 +1507,7 @@ boolean writeSignalToEeprom()
   else{
     return false;                                   // Unable to store the signal. It wasn't long enough or there was not enough space for it.
   }
-  send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Signal stored succesfully") )); wait(RADIO_DELAY);
+  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Signal stored succesfully") )); wait(RADIO_DELAY);
   return true;                                      // Succesfully stored the signal
 }
 
@@ -1690,7 +1721,7 @@ void replay(byte signalNumber, boolean onOrOff)
     updateDisplay(NO_SIGNAL_STORED_YET);            // Only useful to show this if there are physical buttons that don't have a replayable signal attached to them yet.
   }
 #endif
-  send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Replayed a signal") )); wait(RADIO_DELAY);
+  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Replayed a signal") )); wait(RADIO_DELAY);
   state = LISTENING;
 }                                                   // End of replay function
 
@@ -1706,6 +1737,7 @@ void updateDisplay(byte currentStatus)              // Show info on the display
   Serial.println(); Serial.print(F("UPDATE DISPLAY (state: ")); Serial.println(state);
 #endif
   clearReceivedBuffer();
+  turnOnScreen();                                   // If the screen is turned off, it will be turned on again.
   
   if( currentStatus == LISTENING ){
     showTouchButtons();
@@ -2085,25 +2117,30 @@ void receive(const MyMessage &message)
   Serial.print(F("INCOMING MESSAGE for child #")); Serial.println(message.sensor);
   if( message.type==V_STATUS ){
     Serial.print("-Requested status: "); Serial.println(message.getBool());
-    
+
+    //turnOnScreen(); // Handled by display function now.
+
+#if !(defined(HAS_TOUCH_SCREEN))
     if( (message.sensor == LEARN_SIMPLE_BTN_ID ) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
-      send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Please play the signal") )); wait(RADIO_DELAY);
+      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Please play the signal") )); wait(RADIO_DELAY);
       state = LEARNING_SIMPLE;
     }
     else if( (message.sensor == LEARN_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
-      send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); wait(RADIO_DELAY);
+      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); wait(RADIO_DELAY);
       state = LEARNING_ON;
     }
     if( (message.sensor == COPYING_SIMPLE_BTN_ID) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
-      send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Please play the signal") )); wait(RADIO_DELAY);
+      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Please play the signal") )); wait(RADIO_DELAY);
       state = COPYING_SIMPLE;
     }
     else if( (message.sensor == COPYING_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
-      send(textMessage.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); wait(RADIO_DELAY);
+      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); wait(RADIO_DELAY);
       state = COPYING_ON;
     }
-    else if( message.sensor >= 100 ){               // If the user toggled a signal replay button.
-      Serial.println("-Replaying signal!");
+    else 
+#endif
+    if( message.sensor >= 100 ){               // If the user toggled a signal replay button.
+      Serial.println("-Replaying!");
       replay(message.sensor - 99, message.getBool() );
     }
     updateDisplay(state);
@@ -2442,11 +2479,8 @@ void basicCommand(const char* cmd)
   if( mySerial.available() ){                       // If necessary, clear old messages from the serial buffer.
     clearReceivedBuffer();
   } 
-  
-  //Serial.println();
 
   mySerial.write(0x7E);                             // Starting byte, is always the same.
-  //Serial.print(0x7E); Serial.print(F(" "));
   byte b = 0;
   while( b < MAX_BASIC_COMMAND_LENGTH ){            // How many bytes are the basic commands at most?
     mySerial.write( pgm_read_byte(&cmd[b]) );
@@ -2462,7 +2496,7 @@ void basicCommand(const char* cmd)
 
 
 // This function can be activated after sending a command. It will wait until a response has arrived (or 100 milliseconds have passed), and then allow the Arduino to continue.
-void waitForResponse(byte expectedBytes)
+void waitForResponse(byte expectedBytes) // From the touch screen
 {
   //Serial.println(); Serial.println(F("WAITING FOR RESPONSE"));
   byte b = 0;
@@ -2476,6 +2510,14 @@ void waitForResponse(byte expectedBytes)
   delay(10);                                        // A small extra delay seems to be required.
   readResponse();
   delay(10);
+}
+
+void turnOnScreen()
+{
+  if( brightnessTimer == 0 ){
+    basicCommand(backlight_on);                     // Turn on the screen backlight again.
+  }
+  brightnessTimer = 255;
 }
 
 
