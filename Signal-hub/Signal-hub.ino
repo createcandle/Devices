@@ -84,7 +84,7 @@
   */
 
 
-#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
+//#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
 //#define DEBUG_SCREEN                              // Do you want to see extra debugging information about the touch screen in the serial output?
 //#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
@@ -491,7 +491,7 @@ void send_values(){
 
 void setup() 
 {
-  Serial.println(F("SETUP"));
+  //Serial.println(F("SETUP"));
   
   pinMode(RECEIVER, INPUT_PULLUP);                  // 433 receiver
   //pinMode(RECEIVER, INPUT);                       // 433 receiver
@@ -735,13 +735,15 @@ void loop()
 
       // If there is a signal to be played in the playlist, play it.
       if( playlist_position > 0 ){
-        Serial.println(F("Playing signal from playlist"));
+        Serial.print(F("Playing signal from playlist #")); Serial.println(playlist_position);
         if( playlist[playlist_position] > 100 ){
           replay( playlist[playlist_position] - 100, 1);
         }
         else{
           replay( playlist[playlist_position], 0);
         }
+        playlist_position--;
+        Serial.print(F("-new #")); Serial.println(playlist_position);
       }
       
 
@@ -1396,7 +1398,7 @@ byte scanEeprom()
           }
           if( areTheyTheSame == true ){           // We've compared the entire signal, and.. they are the same!
             Serial.println(F("Match"));
-            Serial.print(F("SEND: Toggle ")); Serial.print(999 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)); Serial.print(F(" to ")); Serial.println(i);
+            Serial.print(F("SEND: Toggle ")); Serial.print(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)); Serial.print(F(" to ")); Serial.println(i);
             
             if( bitRead(descriptionData, DESCRIPTION_ON_OFF) ){ // This is an on-off type detection, so we just toggle it to the correct position.
               Serial.println(F("-----simple-on-off-toggle"));
@@ -1666,7 +1668,7 @@ void replay(byte signalNumber, boolean onOrOff)
       timings[restoredSignalLength] = EEPROM.read( startPosition + eepromReadPosition ); // Eeprom position here is 5 or 7, depending on whether the second repeating duo was a reconstructable or not.
       restoredSignalLength++;
       eepromReadPosition++;
-      #ifdef DEBUG
+#ifdef DEBUG
       Serial.println(F("Reconstructed betweenSpace anomaly: "));
       Serial.print(F("0 => ")); Serial.println(timings[0]);
       Serial.print(F("1 => ")); Serial.println(timings[1]);    
@@ -1711,7 +1713,7 @@ void replay(byte signalNumber, boolean onOrOff)
         timings[restoredSignalLength] = metaData[ bitRead(EEPROM.read(i),j) * 2 +1];
         restoredSignalLength++;
       }
-      Serial.println();
+      //Serial.println();
     }
     // If the last byte is only half used, then we should not transmit the last half byte.
     if( lastByteIsSplit ){
@@ -1735,13 +1737,14 @@ void replay(byte signalNumber, boolean onOrOff)
     Serial.print(F(">> restoredSignalLength ")); Serial.println(restoredSignalLength); Serial.println();
 #endif
 
-    
+#ifdef DEBUG
     for( int j = 0; j < restoredSignalLength; j++ ){
       Serial.print( timings[j] ); Serial.print(F(","));
       if( j % 4 == 3 ){ Serial.println(); }
       if( j % 32 == 31 ){ Serial.println(); }
     }
-    
+#endif
+
     // Finally, play the new timing a few times.
     Serial.println(F("REPLAYING"));
     for( byte i = 0; i < 8; i++ ){                  // Sending the pattern a few times.
@@ -1801,9 +1804,9 @@ void replay(byte signalNumber, boolean onOrOff)
 #endif
   send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("OK") ));
   state = LISTENING;
-  if( playlist_position > 0){
-    playlist_position--;
-  }
+  //if( playlist_position > 0){
+  //  playlist_position--;
+  //}
 }                                                   // End of replay function
 
 
@@ -2595,7 +2598,10 @@ void clearReceivedBuffer()
 void receive(const MyMessage &message)
 {
   Serial.print(F("INCOMING MESSAGE for child #")); Serial.println(message.sensor);
-  if( message.type==V_STATUS ){
+  if (message.isAck()) {
+    Serial.println(F("-Ack"));
+  }
+  else if( message.type==V_STATUS ){
     Serial.print(F("-Requested status: ")); Serial.println(message.getBool());
 
     //turnOnScreen(); // Handled by display function now.
@@ -2621,25 +2627,23 @@ void receive(const MyMessage &message)
 #endif
 
     if( message.sensor >= 10  && message.sensor < 100 ){ // If the user toggled a signal replay button.
-      if( playlist_position < PLAYLIST_SIZE){
+      if( playlist_position < PLAYLIST_SIZE){ // We only add to the playlist if there is space left in the playlist.
         
-#ifdef DEBUG
-        Serial.println(F("Adding to playlist"));
-#endif
+        Serial.println(F("-Adding to playlist"));
+        playlist_position++;
         if( message.getBool() == 0 ){
           playlist[playlist_position] = (message.sensor - 9);
         }
         else {
           playlist[playlist_position] = (message.sensor - 9) + 100;
         }
-        playlist_position++;
+        
         //replay(message.sensor - 9, message.getBool());
-
 
       }
       else{
 #ifdef DEBUG
-        Serial.println(F("Playlist already full"));
+        Serial.println(F("Playlist full"));
 #endif
       }
     }
