@@ -16,8 +16,8 @@
  * - Create a smart home security solution using cheap window and movement sensors.
  * - Automatically turn on lights and other devices when you get home, or when the sun goes down etc, using wireless power sockets.
  * - Control automations using wireless buttons or remote controls.
- * m
- * The system can store 50 "recognise only" signals, or about 20 on/off signals. You can store any combination of these.
+ * 
+ * An Arduino Nano can store 50 "recognise only" signals, or about 20 on/off signals. You can store any combination of these. If you need to store more signals you could look into using an Arduino Mega.
  * 
  * Are there any limits?
  * - This does not work on things like garage door openers or keyless entry systems for cars. 
@@ -34,11 +34,7 @@
  
 #define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommend.  
 
-//#define HAS_BASIC_OLED_SCREEN                     // Have you connected a simple OLED screen? Connecting a screen is recommend. 
-
-#define KEYPAD_BUTTON_COUNT 0                       // How many buttons does your keypad have? Leave at 0 if you are using a touch screen.
-
-//#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // If you are using the Candle Manager, the password will be changed to what you chose in the interface automatically. Be aware, the length of the password has an effect on memory use.
 
 
  /* END OF SETTINGS
@@ -84,16 +80,13 @@
   *  - Another bit could be used to store if an on/off signal should also be recognisable. That way the remote could be used twice somehow.. Or: 
   *  - Request current status of on/off toggles from the controller. Though it might be jarring or even dangerous if all devices suddenly toggled to their new positions.
   *  - Turn off the display after a while.
+  *  - Send new children as they are created.
   */
 
 
-
-//
-// SETTINGS
-//
-
-//#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
+#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
 //#define DEBUG_SCREEN                              // Do you want to see extra debugging information about the touch screen in the serial output?
+//#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 // Receiver and transmitter pins
 #define RECEIVER 3                                  // The pin where the receiver is connected.
@@ -107,9 +100,6 @@
 // This means the system might not detect a signal because it is busy analysing a bad signal. It's up to you if you want to use it.
 //#define PATTERN_FINDER
 
-
-#define MY_DEBUG                                 // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
-
 // Enable and select the attached radio type
 #define MY_RADIO_RF24                               // This is a common and simple radio used with MySensors. Downside is that it uses the same frequency space as WiFi.
 //#define MY_RADIO_NRF5_ESB                         // This is a new type of device that is arduino and radio all in one. Currently not suitable for beginners yet.
@@ -122,13 +112,14 @@
 //#define MY_RF24_PA_LEVEL RF24_PA_HIGH
 //#define MY_RF24_PA_LEVEL RF24_PA_MAX
 
-// Mysensors security
-#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7           // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
+// Mysensors advanced security
+//#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
+//#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
 // Mysensors advanced settings
 #define MY_TRANSPORT_WAIT_READY_MS 10000            // Try connecting for 10 seconds. Otherwise just continue.
 //#define MY_RF24_CHANNEL 100                       // In EU the default channel 76 overlaps with wifi, so you could try using channel 100. But you will have to set this up on every device, and also on the controller.
-//#define MY_RF24_DATARATE RF24_1MBPS               // Slower datarate makes the network more stable?
+#define MY_RF24_DATARATE RF24_1MBPS                 // Slower datarate makes the network more stable?
 //#define MY_NODE_ID 10                             // Giving a node a manual ID can in rare cases fix connection issues.
 //#define MY_PARENT_NODE_ID 0                       // Fixating the ID of the gatewaynode can in rare cases fix connection issues.
 //#define MY_PARENT_NODE_IS_STATIC                  // Used together with setting the parent node ID. Daking the controller ID static can in rare cases fix connection issues.
@@ -141,6 +132,9 @@
 
 #include <MySensors.h>                              // The library that helps form the wireless network.
 #include <EEPROM.h>                                 // Allows for storing data on the Arduino itself, like a mini hard-drive.
+
+
+//#define HAS_BASIC_OLED_SCREEN                     // Have you connected a simple OLED screen? Connecting a screen is recommend. 
 
 // Basic OLED screen
 #ifdef HAS_BASIC_OLED_SCREEN
@@ -195,6 +189,7 @@ PROGMEM const byte backlight_off[] =    {0x03, 0x06, 0x00, 0xEF}; // Backlight i
 //PROGMEM const byte serialSpeedUp[] =    {0x03, 0x40, 0x03, 0xEF,}; // Sets communication speed to 57600 (from 9600)
 //PROGMEM const byte serialSlowDown[] =   {0x03, 0x40, 0x00, 0xEF,}; // Sets communication speed to 9600 again. Oddly enough, it seems it works fastest at this speed..
 
+#endif
 
 PROGMEM const char detectedMessage[] = { "Detected  " }; // This construction saves some memory.
 PROGMEM const char replayMessage[]   = { "Replay    " }; // This construction saves some memory.
@@ -214,13 +209,14 @@ orange: FC 80 = 64640
 half grey: 7BEF = 31727
 */
 
-#endif
+
 
 
 // Keypad
 #define KEYPAD_PIN A0                               // The pin where the analog keypad is connected. These keypads vary their resistance according to which button is pressed.
 byte buttonPressed = 100;                           // The last button that was pressed by the user.
 byte prevButtonState = 100; 
+#define KEYPAD_BUTTON_COUNT 0                       // How many buttons does your keypad have? Leave at 0 if you are using a touch screen.
 
 #if KEYPAD_BUTTON_COUNT > 0
 boolean buttonsToggleStatus[KEYPAD_BUTTON_COUNT + 1];  // Array to hold the buttons' toggle status (if the button has an on/off signal). For simple signals buttonsToggleStatus[x] is always 0. For on/off signals this actually switches between 0 and 1. For simplicity, the zero position of the array is ignored.
@@ -282,6 +278,12 @@ byte bucketCount = 0;                               // How many different types 
 boolean connectedToNetwork = false;                 // Are we connected to the local MySensors network? Used to display the 'w' connection icon.
 byte lengthOfSignalWeAreWaitingFor = 3;             // Used when recording on-off signals. The off-signal should have the same byte length as the on signal.     
 byte brightnessTimer = 255;                         // When this reaches 0 the screen is turned off.
+
+#define PLAYLIST_SIZE 6
+byte playlist[PLAYLIST_SIZE];                       // Sometimes multiple demands to play a signal come in. This holds all the signals we should replay one after the other
+byte playlist_position = 0;                         // Signals that should be replayed are placed in a playlist, so they can be played one after the other of multiple should be played.
+
+
 // DESCRIPTION BIT STATES
 
 #define DESCRIPTION_HALFBYTE 0
@@ -404,25 +406,92 @@ MyMessage detectmsg(10, V_TRIPPED);                 // The message for detect-on
 
 
 static unsigned long lastLoopTime = 0;              // Holds the last time the main loop ran.
+boolean resend_button_states = 1;
 
+void before()
+{
+  Serial.begin(115200);
 
-void presentation()
-{ 
-  sendSketchInfo(F("Signal Hub"), F("1.1")); wait(RADIO_DELAY); // Child 0. Sends the sketch version information to the gateway and Controller
-  present(DEVICE_STATUS_ID, S_INFO, F("Device status")); wait(RADIO_DELAY); // Child 1. This outputs general status details.
-  //present(LISTENER_OUTPUT_ID, S_INFO, F("Detected codes")); wait(RADIO_DELAY); // Child 2. This outputs the ID of detected signals that were matched to signals in eeprom.
-#if !(defined(HAS_TOUCH_SCREEN))
-  present(LEARN_SIMPLE_BTN_ID, S_BINARY, F("Recognise a single code")); wait(RADIO_DELAY);// Child 3
-  present(LEARN_ON_OFF_BTN_ID, S_BINARY, F("Recognise an ON+OFF code")); wait(RADIO_DELAY); // Child 4
-  present(COPYING_SIMPLE_BTN_ID, S_BINARY, F("Copy a single code")); wait(RADIO_DELAY); // Child 5
-  present(COPYING_ON_OFF_BTN_ID, S_BINARY, F("Copy an ON/OFF code")); wait(RADIO_DELAY); // Child 6
-#endif
 }
 
 
+void presentation()
+{
+  scanEeprom();                                    // Find out how many signals are stored in memory.
+  
+  sendSketchInfo(F("Signal Hub"), F("1.1")); wait(RADIO_DELAY); // Child 0. Sends the sketch version information to the gateway and Controller
+  present(DEVICE_STATUS_ID, S_INFO, F("Device status")); wait(RADIO_DELAY); // Child 1. This outputs general status details.
+
+  //present(LISTENER_OUTPUT_ID, S_INFO, F("Detected codes")); wait(RADIO_DELAY); // Child 2. This outputs the ID of detected signals that were matched to signals in eeprom.
+#if !(defined(HAS_TOUCH_SCREEN))
+  Serial.println(F("NO TOUCHSCREEN"));
+  present(LEARN_SIMPLE_BTN_ID, S_BINARY, F("Recognize a single code")); wait(RADIO_DELAY);// Child 3
+  present(LEARN_ON_OFF_BTN_ID, S_BINARY, F("Recognize an ON+OFF code")); wait(RADIO_DELAY); // Child 4
+  present(COPYING_SIMPLE_BTN_ID, S_BINARY, F("Copy a single code")); wait(RADIO_DELAY); // Child 5
+  present(COPYING_ON_OFF_BTN_ID, S_BINARY, F("Copy an ON/OFF code")); wait(RADIO_DELAY); // Child 6
+#endif
+
+  char childNameMessage[11];
+  
+  strcpy_P(childNameMessage, replayMessage);
+  
+  // We loop over all the replayable signals, and present them to the controller.
+  for( byte replayableID=10; replayableID < 10 + amountOfStoredReplayableSignals; replayableID++ ){
+#ifdef DEBUG
+    Serial.print(F("Replayable child ID ")); Serial.println(replayableID);
+#endif
+    childNameMessage[7] = (replayableID - 10) + 49;
+    present(replayableID, S_BINARY, childNameMessage); wait(RADIO_DELAY);
+  }
+
+  strcpy_P(childNameMessage, detectedMessage);
+  
+  // We loop over all the detect-only signals, and present them to the controller. 
+  for( byte recognisedID=100; recognisedID < 100 + (amountOfStoredSignals - amountOfStoredReplayableSignals); recognisedID++ ){
+#ifdef DEBUG
+    Serial.print(F("Detectable child ID ")); Serial.println(recognisedID);
+#endif
+    childNameMessage[9] = (recognisedID - 100) + 49; // ASCII character '1' has number 49.
+    present(recognisedID, S_DOOR, childNameMessage); wait(RADIO_DELAY);
+  }
+
+  resend_button_states = 1;
+}
+
+
+
+void send_values(){
+#ifdef DEBUG
+  Serial.println(F("Sending button states"));
+#endif
+
+#if !(defined(HAS_TOUCH_SCREEN))
+  send(buttonmsg.setSensor(LEARN_SIMPLE_BTN_ID).set(0));
+  send(buttonmsg.setSensor(LEARN_ON_OFF_BTN_ID).set(0));
+  send(buttonmsg.setSensor(COPYING_SIMPLE_BTN_ID).set(0));
+  send(buttonmsg.setSensor(COPYING_ON_OFF_BTN_ID).set(0));
+#endif
+
+  // We loop over all the replayable signals, and send their values.
+  for( byte replayableID=10; replayableID < 10 + amountOfStoredReplayableSignals; replayableID++ ){
+    //Serial.print(F("replay loadState at presentation: ")); Serial.println(loadState(replayableID));
+    if( loadState(replayableID - 9) > 1 ){ saveState(replayableID - 9, 0); } // The -9 is to offset the ID back the the savestates in the eeprom. So child 10 has savestate 1, etc.
+    boolean state = loadState(replayableID - 9);
+    send(buttonmsg.setSensor(replayableID).set( state?false:true )); wait(RADIO_DELAY); // Tell the controller in what state the child is.
+  }
+
+  wait(RADIO_DELAY);
+
+  // We loop over all the detect-only signals, and send their values.
+  for( byte recognisedID=100; recognisedID < 100 + (amountOfStoredSignals - amountOfStoredReplayableSignals); recognisedID++ ){
+    send(detectmsg.setSensor(recognisedID).set( 0 )); wait(RADIO_DELAY); // Tell the controller in what state the child is.
+  }
+
+}
+
 void setup() 
 {
-  Serial.begin(115200);
+  Serial.println(F("SETUP"));
   
   pinMode(RECEIVER, INPUT_PULLUP);                  // 433 receiver
   //pinMode(RECEIVER, INPUT);                       // 433 receiver
@@ -459,8 +528,9 @@ void setup()
     Serial.println(F("Connected to gateway!"));
     connectedToNetwork = true;
     //send(relaymsg.setSensor(RELAY1_CHILD_ID).set( actualDoorStates[0] )); wait(RADIO_DELAY); // Tell the controller in what state the lock is.
-    scanEeprom();                                    // Find out how many signals are stored in memory.
-
+  
+    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Hi") )); //wait(RADIO_DELAY);
+  
 #ifdef DEBUG    
     Serial.print(F("Stored signal count: "));
     Serial.println(amountOfStoredSignals);
@@ -468,25 +538,7 @@ void setup()
     Serial.println(amountOfStoredReplayableSignals);
 #endif
 
-    char childNameMessage[11];
-    strcpy_P(childNameMessage, detectedMessage);
-    
-    // We loop over all the detect-only signals, and present them to the controller. Their Child ID's are between 10 and 99.
-    for( byte recognisedID=10; recognisedID < 10 + (amountOfStoredSignals - amountOfStoredReplayableSignals); recognisedID++ ){
-      Serial.print(F("Detectable child ID ")); Serial.println(recognisedID);
-      childNameMessage[9] = recognisedID + 39; // (recognisedID - 10) + 49;
-      present(recognisedID, S_DOOR, childNameMessage); wait(RADIO_DELAY);
-      send(detectmsg.setSensor(recognisedID).set( 0 )); wait(RADIO_DELAY); // Tell the controller in what state the lock is.
-    }
 
-    strcpy_P(childNameMessage, replayMessage);
-    // We loop over all the replayable signals, and present them to the controller. Their child ID's are between 100 and 200.
-    for( byte replayableID=100; replayableID < 100 + amountOfStoredReplayableSignals; replayableID++ ){
-      Serial.print(F("Replayable child ID ")); Serial.println(replayableID);
-      childNameMessage[7] = (replayableID - 100) + 49;
-      present(replayableID, S_BINARY, childNameMessage); wait(RADIO_DELAY);
-      send(buttonmsg.setSensor(replayableID).set( 0 )); wait(RADIO_DELAY); // Tell the controller in what state the lock is.
-    }
   }
   else{
     Serial.println(F("! NOCONNECTION"));
@@ -497,13 +549,14 @@ void setup()
   updateDisplay(LISTENING);                         // Show "Listening" on the display.
   clearTimingsArray();                              // Reset everything, so that we are ready to listen for a signal.
 
+#ifdef HAS_TOUCH_SCREEN
   basicCommand(backlight_on);
-  
+#endif
+
 #ifdef DEBUG
   Serial.print(F("Free RAM after setup = ")); Serial.println(freeRam());
 #endif
-  
-  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Hi") )); wait(RADIO_DELAY);
+
 }
  
  
@@ -585,11 +638,6 @@ void loop()
 #endif
 
     if( validSignal && edges > MINIMAL_SIGNAL_LENGTH * 2 ){ // The timings data is long enough.
-#ifdef DEBUG
-      //Serial.println(F("Received a signal")); 
-      //signalIsOk = false;
-      //printRawSignal();
-#endif
       if( signalViabilityCheck() ){                 // A quick quality check on the signal.
         Serial.println(F("PROCESSING"));
 #ifdef HAS_BASIC_OLED_SCREEN
@@ -607,7 +655,7 @@ void loop()
               //Serial.print(F("DetectedSignalNumber = ")); Serial.println(detectedSignalNumber);
               if( scanEeprom() ){                   // If the signal matches a signal in eeprom, then the scanEeprom function returns its number in eeprom. If there is no match, it returns 0.
                 Serial.println(F("MATCH"));
-                send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Detected a known signal") )); wait(RADIO_DELAY);
+                send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Detected a known signal") )); //wait(RADIO_DELAY);
               }
             }
             else if( state > MENU_NEW && state < MENU_DELETE_LAST ){                             // States in which a signal is supposed to be copied to the EEPROM memory.
@@ -627,21 +675,22 @@ void loop()
                   if( state == COPYING_ON || state == LEARNING_ON ){
                     Serial.println(F(" Now play OFF signal"));
                     lengthOfSignalWeAreWaitingFor = repeatingSignalByteLength; // When we record the 'off' signal later, we want it to be the same length.
-                    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Now play the OFF signal") )); wait(RADIO_DELAY);
+                    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Now play the OFF signal") )); //wait(RADIO_DELAY);
                     if( state == COPYING_ON ){ state = COPYING_OFF; } // switch to the next part of the process.
                     if( state == LEARNING_ON ){ state = LEARNING_OFF; } // switch to the next part of the process.
                   }
                   else{
                     updateDisplay(SIGNAL_STORED);
+                    presentation();                 // Re-present the node, which now has a new child.
                     Serial.println(F("Finished copying"));
-                    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Learning went OK") )); wait(RADIO_DELAY);
+                    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Learning went OK") ));// wait(RADIO_DELAY);
                     state = LISTENING;
                   }
                 }
                 else{                               // Storing the signal in EEPROM failed.
                   Serial.println(F("Error storing signal"));
                   updateDisplay(OUT_OF_SPACE);
-                  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Error storing signal") )); wait(RADIO_DELAY);
+                  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Error storing signal") )); //wait(RADIO_DELAY);
                   state = LISTENING;
                 }
               }
@@ -667,6 +716,13 @@ void loop()
     }
 
 
+    // If demanded, we send the new button states.
+    if( resend_button_states ){
+      Serial.println(F("RESENDING BUTTON STATES"));
+      resend_button_states = 0;
+      send_values();
+    }
+
 #if defined (HAS_BASIC_OLED_SCREEN) || defined (HAS_TOUCH_SCREEN)
 
     //
@@ -676,6 +732,18 @@ void loop()
     // Once every 100 milliseconds check if the menu button is being pressed.
     if( millis() - lastLoopTime > 100 ){
       lastLoopTime = millis();
+
+      // If there is a signal to be played in the playlist, play it.
+      if( playlist_position > 0 ){
+        Serial.println(F("Playing signal from playlist"));
+        if( playlist[playlist_position] > 100 ){
+          replay( playlist[playlist_position] - 100, 1);
+        }
+        else{
+          replay( playlist[playlist_position], 0);
+        }
+      }
+      
 
       // Turn screen off after a while
       if( brightnessTimer > 1){
@@ -1165,54 +1233,56 @@ boolean signalAnalysis()
 
 boolean findPattern()
 {
-    Serial.println(F("___pattern_finder___"));     
-    byte maxPatternLength = (byte)constrain((endPosition-startPosition)/2, 31, 255); // what length is the pattern we're looking for allowed to be? It's most likely 8 bytes = 64 bits = 128 timings, but we can't be sure in this case. To find a repeating pattern, we need to be able to have it in the data twice, so the maximum length is the timings array length divided by two.
-    byte searchLength = 32;                         
-    while( searchLength + 4 <= maxPatternLength ){  // Check the maximum pattern length we can search for in the current memory.
-      searchLength = searchLength + 4;
-    }
-    //Serial.print(F(" searchLength that we begin pattern matching with: ")); Serial.println(searchLength);
-    for( searchLength; searchLength > MINIMAL_SIGNAL_LENGTH; searchLength = searchLength - 4 ){ // Find repeating patterns of a minimal length, starting with a long as possible signal, and then working down.
-      int patternFirstPosition = 0;                 // Where we found an often occuring pattern for the first time. To keep things simple(low memory) we only search the first 255 positions of the array.
-      for ( int i = startPosition; i <= endPosition-searchLength; i++ ){
-        byte patternCount = 0;
-        for ( int y = startPosition; y <= endPosition-searchLength; y++ ) {
-          boolean oksofar = true;                   // Starts out assuming the pattern is found, and then starts comparing. As soon as one of the timings is not the same, it sets this to false.
-          for (byte r = 0; r < searchLength; r++) { // We compare the selected patterns
-            if( timings[i+r] != timings[y+r] ){
-              oksofar = false;                      // If the pattern is not found at this position.
-              break;                                // No need continuing the comparison.
-            }
-          }
-          if( oksofar == true ){
-            patternCount++;                         // We scanned over the position in the array, and nothing tripped up the recogniser, meaning it actuallly found the pattern.
-            y = y + (searchLength-1);               // Minus one, because the for-loop will also add one. We skip ahead and see if we can find the same pattern again straigth after.
+#ifdef DEBUG
+  Serial.println(F("___pattern_finder___"));
+#endif  
+  byte maxPatternLength = (byte)constrain((endPosition-startPosition)/2, 31, 255); // what length is the pattern we're looking for allowed to be? It's most likely 8 bytes = 64 bits = 128 timings, but we can't be sure in this case. To find a repeating pattern, we need to be able to have it in the data twice, so the maximum length is the timings array length divided by two.
+  byte searchLength = 32;                         
+  while( searchLength + 4 <= maxPatternLength ){  // Check the maximum pattern length we can search for in the current memory.
+    searchLength = searchLength + 4;
+  }
+  //Serial.print(F(" searchLength that we begin pattern matching with: ")); Serial.println(searchLength);
+  for( searchLength; searchLength > MINIMAL_SIGNAL_LENGTH; searchLength = searchLength - 4 ){ // Find repeating patterns of a minimal length, starting with a long as possible signal, and then working down.
+    int patternFirstPosition = 0;                 // Where we found an often occuring pattern for the first time. To keep things simple(low memory) we only search the first 255 positions of the array.
+    for ( int i = startPosition; i <= endPosition-searchLength; i++ ){
+      byte patternCount = 0;
+      for ( int y = startPosition; y <= endPosition-searchLength; y++ ) {
+        boolean oksofar = true;                   // Starts out assuming the pattern is found, and then starts comparing. As soon as one of the timings is not the same, it sets this to false.
+        for (byte r = 0; r < searchLength; r++) { // We compare the selected patterns
+          if( timings[i+r] != timings[y+r] ){
+            oksofar = false;                      // If the pattern is not found at this position.
+            break;                                // No need continuing the comparison.
           }
         }
-        if(patternCount > 1){                       // We found a repeating pattern!
-          // Quick quality check. It makes sure the found code isn't just the same number in a row a lot.
-          int sameNumber = 0;
-          for( int j = startPosition; j <= endPosition; j++ ){
-            if( timings[j] == timings[startPosition] ){
-              sameNumber++;
-            }
-          }
-          if(sameNumber > 15){                      // This many of the same timings in a row is a bad sign.
-            return false;
-          }
-          Serial.print(F("Pattern: "));
-          for (int t = 0; t < searchLength; t++) {
-            Serial.print(timings[i + t]); Serial.print(F(",")); 
-          }
-          Serial.println();
-          // Update the global variables:
-          repeatingPatternLength = searchLength;    // Store the length of the repeating part.
-          startPosition = i;                        // Set the start position of the repeating part of the signal.
-          endPosition = i + searchLength;           // Set the end position of the repeating oart of the signal.
-          return true;
+        if( oksofar == true ){
+          patternCount++;                         // We scanned over the position in the array, and nothing tripped up the recogniser, meaning it actuallly found the pattern.
+          y = y + (searchLength-1);               // Minus one, because the for-loop will also add one. We skip ahead and see if we can find the same pattern again straigth after.
         }
       }
+      if(patternCount > 1){                       // We found a repeating pattern!
+        // Quick quality check. It makes sure the found code isn't just the same number in a row a lot.
+        int sameNumber = 0;
+        for( int j = startPosition; j <= endPosition; j++ ){
+          if( timings[j] == timings[startPosition] ){
+            sameNumber++;
+          }
+        }
+        if(sameNumber > 15){                      // This many of the same timings in a row is a bad sign.
+          return false;
+        }
+        Serial.print(F("Pattern: "));
+        for (int t = 0; t < searchLength; t++) {
+          Serial.print(timings[i + t]); Serial.print(F(",")); 
+        }
+        Serial.println();
+        // Update the global variables:
+        repeatingPatternLength = searchLength;    // Store the length of the repeating part.
+        startPosition = i;                        // Set the start position of the repeating part of the signal.
+        endPosition = i + searchLength;           // Set the end position of the repeating oart of the signal.
+        return true;
+      }
     }
+  }
   //Serial.println(F("Pattern finder failed"));
   return false;                                     // We reached the end without finding any repeating pattern.
 }
@@ -1236,8 +1306,10 @@ byte scanEeprom()
   while( finishedScanningEeprom == false ){
     //Serial.println(positionOfLastSignalEnd);
     byte storedSignalLength = EEPROM.read(positionOfLastSignalEnd + 1); // This get the first byte of the next stored signal (if it exists), and indicates how much data it takes on the eeprom.
+#ifdef DEBUG
     Serial.print(F("#")); Serial.println(amountOfStoredSignals + 1);
     Serial.print(F("-storedlength:"));Serial.println(storedSignalLength);
+#endif
     if( storedSignalLength == 0xff || storedSignalLength == 0x00 ){ // No more signals found in the EEPROM.
       finishedScanningEeprom = true;
     }
@@ -1246,13 +1318,6 @@ byte scanEeprom()
     else {
       //if( positionOfLastSignalEnd + storedSignalLength > EEPROM.length() ){ break; } // This should theoretically never happen. But if it did it would lock up the device, so it can't hurt.
       // DELETE THE LAST RECORDED SIGNAL?
-      if( state == DELETE_LAST){
-        Serial.print(F("deletelast, length:")); Serial.println(storedSignalLength);
-        Serial.print(F("deletelast, start pos:")); Serial.println( EEPROM.read(positionOfLastSignalEnd + 1) );
-        Serial.print(F("deletelast, end pos:")); Serial.println( EEPROM.read(positionOfLastSignalEnd + 1 + storedSignalLength) );
-        Serial.print(F("deletelast, last signal end pos:")); Serial.println(positionOfLastSignalEnd);
-        Serial.print(F("deletelast, last signal last value:")); Serial.println( EEPROM.read(positionOfLastSignalEnd) );
-      }
       if( state == DELETE_LAST && EEPROM.read(positionOfLastSignalEnd + 1 + storedSignalLength) == 0xFF ){ // If the next storage slot empty?
         Serial.println(F("Deleting last stored signal"));
         for( int j = positionOfLastSignalEnd + 1; j < positionOfLastSignalEnd + 1 + storedSignalLength; j++ ){ // Overwrite the last signal with 255's (the default memory state).
@@ -1285,6 +1350,7 @@ byte scanEeprom()
           //Serial.print(F("amountOfStoredReplayableSignals so far: ")); Serial.println(amountOfStoredReplayableSignalsScan);
           //Serial.print(F("page start: "));Serial.println( pageStart );
           //Serial.print(F("replayable. itemNumber: ")); Serial.println( itemNumber );
+          
           if( amountOfStoredReplayableSignalsScan > pageStart && amountOfStoredReplayableSignalsScan <= pageStart + howManyReplayButtonsWillFitOnScreen ){
             if( bitRead(descriptionData, DESCRIPTION_ON_OFF) == 0 ){
               roundedRectangle( 0, BUTTON_HEIGHT + (itemNumber * BUTTON_HEIGHT), TOUCHSCREEN_WIDTH, BUTTON_HEIGHT, (int)BUTTON_HEIGHT/3, 31727 ); // dark grey rounded rectangle.
@@ -1303,15 +1369,17 @@ byte scanEeprom()
               basicCommand(on);
             }
           }
-          else {
+          //else {
             //Serial.println(F("(skip)"));
-          }
+          //}
         }
 #endif
 
       }
       else {
+#ifdef DEBUG
         Serial.println(F("-detectable"));
+#endif
       }
       // LISTENING
       positionOfLastSignalEnd = positionOfLastSignalEnd + storedSignalLength;
@@ -1328,16 +1396,18 @@ byte scanEeprom()
           }
           if( areTheyTheSame == true ){           // We've compared the entire signal, and.. they are the same!
             Serial.println(F("Match"));
-            Serial.print(F("SEND: Toggle ")); Serial.print(10 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)); Serial.print(F(" to ")); Serial.println(i);
+            Serial.print(F("SEND: Toggle ")); Serial.print(999 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)); Serial.print(F(" to ")); Serial.println(i);
             
             if( bitRead(descriptionData, DESCRIPTION_ON_OFF) ){ // This is an on-off type detection, so we just toggle it to the correct position.
-              connectedToNetwork = send(detectmsg.setSensor(10 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(!i),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
+              Serial.println(F("-----simple-on-off-toggle"));
+              connectedToNetwork = send(detectmsg.setSensor(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(!i),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
 
             }
             else{                                 // This is a simple trigger-type detection.
-              connectedToNetwork = send(detectmsg.setSensor(10 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(1),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
-              wait(1000);
-              send(detectmsg.setSensor(10 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(0),1); wait(RADIO_DELAY); // ... and turn if back off again at the controller.
+              Serial.println(F("-----simple-trigger, will go back to off by itself."));
+              connectedToNetwork = send(detectmsg.setSensor(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(1),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
+              wait(2000);
+              send(detectmsg.setSensor(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(0),1); wait(RADIO_DELAY); // ... and turn if back off again at the controller.
             }
             updateDisplay(MATCH);
             whatWeCameHereFor = amountOfStoredSignals; // Sending back the index of this signal. 
@@ -1507,7 +1577,7 @@ boolean writeSignalToEeprom()
   else{
     return false;                                   // Unable to store the signal. It wasn't long enough or there was not enough space for it.
   }
-  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Signal stored succesfully") )); wait(RADIO_DELAY);
+  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Signal stored OK") ));
   return true;                                      // Succesfully stored the signal
 }
 
@@ -1528,6 +1598,10 @@ void replay(byte signalNumber, boolean onOrOff)
   byte storedSignalLength = scanEeprom();
   //Serial.print(F("storedSignalLength received from scanEeprom function: ")); Serial.println(storedSignalLength);
   if( storedSignalLength && amountOfStoredReplayableSignals > 0 ){
+
+    saveState(signalNumber, onOrOff);             // We save the new current toggle state in the eeprom too.
+    send(buttonmsg.setSensor(signalNumber + 9).set(onOrOff)); wait(RADIO_DELAY); // Tell the controller in what state the child is.
+    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Playing..") ));
     updateDisplay(REPLAYING);
     for( byte i = 0; i < 8; i++ ){
       metaData[i] = 0;                              // Reset all metadata values.
@@ -1611,10 +1685,10 @@ void replay(byte signalNumber, boolean onOrOff)
       Serial.print(F("3 => ")); Serial.println(timings[3]);    
 #endif
     }
+#ifdef DEBUG
     Serial.println();
-
     Serial.print(F(">> restoredSignalLength ")); Serial.println(restoredSignalLength); Serial.println();
-
+#endif
 
     if( bitRead(signalDescription, DESCRIPTION_ON_OFF) ){ // If it's an on+off signal then the repeating part should be cut in half to get the actual length, since they are stored back to back in the eeprom.
       repeatingPatternLength = repeatingPatternLength / 2;
@@ -1622,7 +1696,9 @@ void replay(byte signalNumber, boolean onOrOff)
     // Looping over the EEPROM, with some special construction that switches which signal should be reconstructed based on the toggle state of the button.
     for( int i = (endPosition - repeatingPatternLength * (1+onOrOff)) + 1; i <= endPosition - (repeatingPatternLength * onOrOff); i++ ){              
       // Here we can reconstruct the original signal.
+#ifdef DEBUG
       Serial.print(F(" byte ")); Serial.print(i); Serial.print(F(" = ")); Serial.println( EEPROM.read(i) );
+#endif
       for( byte j = 0; j < 8; j++ ){
 #ifdef DEBUG
         Serial.print(restoredSignalLength); Serial.print(F(" => ")); Serial.println( metaData[ bitRead(EEPROM.read(i),j) * 2 ] );
@@ -1692,6 +1768,7 @@ void replay(byte signalNumber, boolean onOrOff)
     Serial.println(F("NOW REPLAYING REVERSED"));
 #endif
 
+#ifdef DEBUG  
     for( byte i = 0; i < 8; i++ ){                  // Sending the pattern a few times.
       boolean high = false;
       for( int j = 0; j < restoredSignalLength; j++ ){
@@ -1709,7 +1786,8 @@ void replay(byte signalNumber, boolean onOrOff)
     }
 
     digitalWrite(TRANSMITTER, LOW);                 // Just to be safe
-    
+#endif
+   
 #ifdef DEBUG    
     wait(100);
     Serial.println(F("DONE REPLAYING"));
@@ -1721,8 +1799,11 @@ void replay(byte signalNumber, boolean onOrOff)
     updateDisplay(NO_SIGNAL_STORED_YET);            // Only useful to show this if there are physical buttons that don't have a replayable signal attached to them yet.
   }
 #endif
-  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Replayed a signal") )); wait(RADIO_DELAY);
+  send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("OK") ));
   state = LISTENING;
+  if( playlist_position > 0){
+    playlist_position--;
+  }
 }                                                   // End of replay function
 
 
@@ -1960,11 +2041,11 @@ byte showMenu()                                     // Lets the user select whic
     if( touched == true ){
       touched = false;
       buttonPressed = touchScreenButtonPress();
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
       Serial.print(F("touched (")); Serial.println(buttonPressed);
 #endif
       if( buttonPressed == 0 ){ // No matter where in the menu we are, when the cancel button is pressed the menu is closed.
-#ifdef DEBUG
+#ifdef DEBUG_SCREEN
         Serial.println(F("Cancel button"));
 #endif
         state = LISTENING;
@@ -2112,40 +2193,6 @@ byte showMenu()                                     // Lets the user select whic
 //
 //  RECEIVING DATA FROM THE NETWORK
 //
-void receive(const MyMessage &message)
-{
-  Serial.print(F("INCOMING MESSAGE for child #")); Serial.println(message.sensor);
-  if( message.type==V_STATUS ){
-    Serial.print("-Requested status: "); Serial.println(message.getBool());
-
-    //turnOnScreen(); // Handled by display function now.
-
-#if !(defined(HAS_TOUCH_SCREEN))
-    if( (message.sensor == LEARN_SIMPLE_BTN_ID ) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
-      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Please play the signal") )); wait(RADIO_DELAY);
-      state = LEARNING_SIMPLE;
-    }
-    else if( (message.sensor == LEARN_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
-      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); wait(RADIO_DELAY);
-      state = LEARNING_ON;
-    }
-    if( (message.sensor == COPYING_SIMPLE_BTN_ID) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
-      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Please play the signal") )); wait(RADIO_DELAY);
-      state = COPYING_SIMPLE;
-    }
-    else if( (message.sensor == COPYING_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
-      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); wait(RADIO_DELAY);
-      state = COPYING_ON;
-    }
-    else 
-#endif
-    if( message.sensor >= 100 ){               // If the user toggled a signal replay button.
-      Serial.println("-Replaying!");
-      replay(message.sensor - 99, message.getBool() );
-    }
-    updateDisplay(state);
-  }
-}
 
 
 
@@ -2542,6 +2589,66 @@ void clearReceivedBuffer()
 }
 
 #endif // End of touch screen check.
+
+
+
+void receive(const MyMessage &message)
+{
+  Serial.print(F("INCOMING MESSAGE for child #")); Serial.println(message.sensor);
+  if( message.type==V_STATUS ){
+    Serial.print(F("-Requested status: ")); Serial.println(message.getBool());
+
+    //turnOnScreen(); // Handled by display function now.
+
+#if !(defined(HAS_TOUCH_SCREEN))
+    if( (message.sensor == LEARN_SIMPLE_BTN_ID ) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
+      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the signal") )); //wait(RADIO_DELAY);
+      state = LEARNING_SIMPLE;
+    }
+    else if( (message.sensor == LEARN_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
+      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); //wait(RADIO_DELAY);
+      state = LEARNING_ON;
+    }
+    if( (message.sensor == COPYING_SIMPLE_BTN_ID) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
+      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the signal") )); //wait(RADIO_DELAY);
+      state = COPYING_SIMPLE;
+    }
+    else if( (message.sensor == COPYING_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
+      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); //wait(RADIO_DELAY);
+      state = COPYING_ON;
+    }
+    else 
+#endif
+
+    if( message.sensor >= 10  && message.sensor < 100 ){ // If the user toggled a signal replay button.
+      if( playlist_position < PLAYLIST_SIZE){
+        
+#ifdef DEBUG
+        Serial.println(F("Adding to playlist"));
+#endif
+        if( message.getBool() == 0 ){
+          playlist[playlist_position] = (message.sensor - 9);
+        }
+        else {
+          playlist[playlist_position] = (message.sensor - 9) + 100;
+        }
+        playlist_position++;
+        //replay(message.sensor - 9, message.getBool());
+
+
+      }
+      else{
+#ifdef DEBUG
+        Serial.println(F("Playlist already full"));
+#endif
+      }
+    }
+    updateDisplay(state);
+  }
+}
+
+
+
 
 /**
  * The MySensors Arduino library handles the wireless radio link and protocol
