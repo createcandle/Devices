@@ -32,7 +32,7 @@
  * SETTINGS */
 
  
-#define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommend.  
+//#define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommend.  
 
 #define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // If you are using the Candle Manager, the password will be changed to what you chose in the interface automatically. Be aware, the length of the password has an effect on memory use.
 
@@ -639,7 +639,9 @@ void loop()
 
     if( validSignal && edges > MINIMAL_SIGNAL_LENGTH * 2 ){ // The timings data is long enough.
       if( signalViabilityCheck() ){                 // A quick quality check on the signal.
+#ifdef DEBUG
         Serial.println(F("PROCESSING"));
+#endif
 #ifdef HAS_BASIC_OLED_SCREEN
         updateDisplay(PROCESSING);
 #endif
@@ -683,7 +685,7 @@ void loop()
                     updateDisplay(SIGNAL_STORED);
                     presentation();                 // Re-present the node, which now has a new child.
                     Serial.println(F("Finished copying"));
-                    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Learning went OK") ));// wait(RADIO_DELAY);
+                    send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("OK") ));// wait(RADIO_DELAY);
                     state = LISTENING;
                   }
                 }
@@ -698,7 +700,9 @@ void loop()
             }
           }                                         // End of 'signal is ok'.
           else {
+#ifdef DEBUG
             Serial.println(F("signalAnalysis failed"));
+#endif
           }
         }
         else{
@@ -2607,21 +2611,24 @@ void receive(const MyMessage &message)
     //turnOnScreen(); // Handled by display function now.
 
 #if !(defined(HAS_TOUCH_SCREEN))
-    if( (message.sensor == LEARN_SIMPLE_BTN_ID ) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
-      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the signal") )); //wait(RADIO_DELAY);
-      state = LEARNING_SIMPLE;
-    }
-    else if( (message.sensor == LEARN_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
-      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); //wait(RADIO_DELAY);
-      state = LEARNING_ON;
-    }
-    if( (message.sensor == COPYING_SIMPLE_BTN_ID) && message.getBool() ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
-      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the signal") )); //wait(RADIO_DELAY);
-      state = COPYING_SIMPLE;
-    }
-    else if( (message.sensor == COPYING_ON_OFF_BTN_ID) && message.getBool() ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
-      send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); //wait(RADIO_DELAY);
-      state = COPYING_ON;
+    if( message.sensor < 10 && message.getBool() ){
+      if( message.sensor == LEARN_SIMPLE_BTN_ID ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
+        send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the signal") )); //wait(RADIO_DELAY);
+        state = LEARNING_SIMPLE;
+      }
+      else if( message.sensor == LEARN_ON_OFF_BTN_ID ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
+        send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); //wait(RADIO_DELAY);
+        state = LEARNING_ON;
+      }
+      if( message.sensor == COPYING_SIMPLE_BTN_ID ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
+        send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the signal") )); //wait(RADIO_DELAY);
+        state = COPYING_SIMPLE;
+      }
+      else if( message.sensor == COPYING_ON_OFF_BTN_ID ){ // The user wants the system to learn a new on+off signal. This only starts when the button is toggled to on.
+        send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the ON signal") )); //wait(RADIO_DELAY);
+        state = COPYING_ON;
+      }
+      //send(buttonmsg.setSensor(message.sensor).set(0)); // The button will already be set back to 'off' after the entire signal is recorded and everything is re-presented.
     }
     else 
 #endif
@@ -2637,14 +2644,7 @@ void receive(const MyMessage &message)
         else {
           playlist[playlist_position] = (message.sensor - 9) + 100;
         }
-        
-        //replay(message.sensor - 9, message.getBool());
-
-      }
-      else{
-#ifdef DEBUG
-        Serial.println(F("Playlist full"));
-#endif
+        //replay(message.sensor - 9, message.getBool()); // The old way of directly starting a replay. Now it uses a playlist.
       }
     }
     updateDisplay(state);
