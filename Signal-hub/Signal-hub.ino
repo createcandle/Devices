@@ -464,6 +464,7 @@ void send_values(){
 #ifdef DEBUG
   Serial.println(F("Sending button states"));
 #endif
+Serial.println(F("RESENDING BUTTON STATES"));
 
 #if !(defined(HAS_TOUCH_SCREEN))
   send(buttonmsg.setSensor(LEARN_SIMPLE_BTN_ID).set(0));
@@ -475,9 +476,12 @@ void send_values(){
   // We loop over all the replayable signals, and send their values.
   for( byte replayableID=10; replayableID < 10 + amountOfStoredReplayableSignals; replayableID++ ){
     //Serial.print(F("replay loadState at presentation: ")); Serial.println(loadState(replayableID));
-    if( loadState(replayableID - 9) > 1 ){ saveState(replayableID - 9, 0); } // The -9 is to offset the ID back the the savestates in the eeprom. So child 10 has savestate 1, etc.
-    boolean state = loadState(replayableID - 9);
-    send(buttonmsg.setSensor(replayableID).set( state?false:true )); wait(RADIO_DELAY); // Tell the controller in what state the child is.
+    if( loadState(replayableID - 9) > 1 ){
+      Serial.println(F("LoadState had big value, setting to 0."));
+      saveState(replayableID - 9, 0); // The -9 is to offset the ID back the the savestates in the eeprom. So child 10 has savestate 1, etc.
+    }
+    boolean saved_toggle_state = loadState(replayableID - 9);
+    send(buttonmsg.setSensor(replayableID).set( saved_toggle_state)); wait(RADIO_DELAY); // Tell the controller in what state the child is. //?0:1
   }
 
   wait(RADIO_DELAY);
@@ -722,7 +726,6 @@ void loop()
 
     // If demanded, we send the new button states.
     if( resend_button_states ){
-      Serial.println(F("RESENDING BUTTON STATES"));
       resend_button_states = 0;
       send_values();
     }
