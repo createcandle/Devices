@@ -32,7 +32,7 @@
  * SETTINGS */
 
  
-//#define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommend.  
+#define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommend.  
 
 #define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // If you are using the Candle Manager, the password will be changed to what you chose in the interface automatically. Be aware, the length of the password has an effect on memory use.
 
@@ -1405,12 +1405,12 @@ byte scanEeprom()
             Serial.print(F("SEND: Toggle ")); Serial.print(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)); Serial.print(F(" to ")); Serial.println(i);
             
             if( bitRead(descriptionData, DESCRIPTION_ON_OFF) ){ // This is an on-off type detection, so we just toggle it to the correct position.
-              Serial.println(F("-----simple-on-off-toggle"));
+              //Serial.println(F("-simple-on-off-toggle"));
               connectedToNetwork = send(detectmsg.setSensor(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(!i),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
 
             }
-            else{                                 // This is a simple trigger-type detection.
-              Serial.println(F("-----simple-trigger, will go back to off by itself."));
+            else{                                 // This is a simple single trigger-type detection.
+              //Serial.println(F("-simple single trigger, will go back to off by itself."));
               connectedToNetwork = send(detectmsg.setSensor(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(1),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
               wait(2000);
               send(detectmsg.setSensor(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(0),1); wait(RADIO_DELAY); // ... and turn if back off again at the controller.
@@ -1832,11 +1832,11 @@ void updateDisplay(byte currentStatus)              // Show info on the display
   }
   else {
     if( currentStatus == MATCH || currentStatus == REPLAYING ){
-      delay(50);
+      wait(50);
       roundedRectangle( 0, ((howManyReplayButtonsWillFitOnScreen + 1) * BUTTON_HEIGHT), TOUCHSCREEN_WIDTH, TOUCHSCREEN_HEIGHT - ((howManyReplayButtonsWillFitOnScreen + 1) * BUTTON_HEIGHT), 0, 64640 ); // Orange rectangle.
-      delay(50);
+      wait(50);
       setCur(BUTTON_PADDING,BUTTON_PADDING+((howManyReplayButtonsWillFitOnScreen + 1) * BUTTON_HEIGHT) );
-      delay(50);
+      wait(50);
       if( currentStatus == MATCH ){
         writeText(START_OF_MENU_DELETE_ALL + MATCH);
         wait(2000);
@@ -2556,14 +2556,14 @@ void waitForResponse(byte expectedBytes) // From the touch screen
   byte b = 0;
   while( mySerial.available() < expectedBytes && b < 100){
     b++;
-    delay(1);
+    wait(1);
   }
 #ifdef DEBUG_SCREEN
   Serial.print(F("wait time: ")); Serial.println(b);
 #endif  
-  delay(10);                                        // A small extra delay seems to be required.
+  wait(10);                                        // A small extra delay seems to be required.
   readResponse();
-  delay(10);
+  wait(10);
 }
 
 void turnOnScreen()
@@ -2647,7 +2647,6 @@ void receive(const MyMessage &message)
         //replay(message.sensor - 9, message.getBool()); // The old way of directly starting a replay. Now it uses a playlist.
       }
     }
-    updateDisplay(state);
   }
 }
 
