@@ -1,6 +1,3 @@
-
-
-
 /*
  *
  * Signal Hub
@@ -138,10 +135,10 @@
 
 // Basic OLED screen
 #ifdef HAS_BASIC_OLED_SCREEN
-#define INCLUDE_SCROLLING 0                         // Simple drivers for the OLED screen.
+#define INCLUDE_SCROLLING 0                         
 #define OLED_I2C_ADDRESS 0x3C
-#include <SSD1306Ascii.h>                           
-#include <SSD1306AsciiAvrI2c.h>
+#include <SSD1306Ascii.h>                           // Driver for the simple OLED screen.
+#include <SSD1306AsciiAvrI2c.h>                     // "SSD1306Ascii"
 SSD1306AsciiAvrI2c oled;
 #endif
 
@@ -182,8 +179,8 @@ PROGMEM const byte text_color_white[] = {0x04, 0x02, 0xFF, 0xFF, 0xEF,}; // whit
 //PROGMEM const byte text_color_black[] = {0x04, 0x02, 0x00, 0x00, 0xEF,}; // Dark text color. fill screen with one color
 //PROGMEM const byte text_color_red[] =   {0x04, 0x02, 0xF8, 0x00, 0xEF,}; // .. text color. fill screen with one color
 
-//PROGMEM const byte resetTFT[] =         {0x02, 0x05, 0xEF,}; // Resets the TFT. But has no real effect.
-//PROGMEM const byte testTFT[] =          {0x02, 0x00, 0xEF,}; // Test the TFT, should respond with "OK".
+PROGMEM const byte resetTFT[] =         {0x02, 0x05, 0xEF,}; // Resets the TFT. But has no real effect.
+PROGMEM const byte testTFT[] =          {0x02, 0x00, 0xEF}; // Test the TFT, should respond with "OK".
 PROGMEM const byte backlight_on[] =     {0x03, 0x06, 0x60, 0xEF}; // Backlight intensity to half-full
 PROGMEM const byte backlight_off[] =    {0x03, 0x06, 0x00, 0xEF}; // Backlight intensity to zero
 //PROGMEM const byte serialSpeedUp[] =    {0x03, 0x40, 0x03, 0xEF,}; // Sets communication speed to 57600 (from 9600)
@@ -411,7 +408,7 @@ boolean resend_button_states = 1;
 void before()
 {
   Serial.begin(115200);
-
+  Serial.println(F("Hello, I am a Signal Hub."));
 }
 
 
@@ -464,7 +461,6 @@ void send_values(){
 #ifdef DEBUG
   Serial.println(F("Sending button states"));
 #endif
-Serial.println(F("RESENDING BUTTON STATES"));
 
 #if !(defined(HAS_TOUCH_SCREEN))
   send(buttonmsg.setSensor(LEARN_SIMPLE_BTN_ID).set(0));
@@ -477,7 +473,9 @@ Serial.println(F("RESENDING BUTTON STATES"));
   for( byte replayableID=10; replayableID < 10 + amountOfStoredReplayableSignals; replayableID++ ){
     //Serial.print(F("replay loadState at presentation: ")); Serial.println(loadState(replayableID));
     if( loadState(replayableID - 9) > 1 ){
+#ifdef DEBUG
       Serial.println(F("LoadState had big value, setting to 0."));
+#endif
       saveState(replayableID - 9, 0); // The -9 is to offset the ID back the the savestates in the eeprom. So child 10 has savestate 1, etc.
     }
     boolean saved_toggle_state = loadState(replayableID - 9);
@@ -495,8 +493,6 @@ Serial.println(F("RESENDING BUTTON STATES"));
 
 void setup() 
 {
-  //Serial.println(F("SETUP"));
-  
   pinMode(RECEIVER, INPUT_PULLUP);                  // 433 receiver
   //pinMode(RECEIVER, INPUT);                       // 433 receiver
   pinMode(TRANSMITTER, OUTPUT);                     // 433 transmitter
@@ -523,6 +519,7 @@ void setup()
   Serial.print(F("replay button slots: ")); Serial.println( howManyReplayButtonsWillFitOnScreen );
 #endif
 
+  basicCommand(resetTFT);                           //
   basicCommand(set_vertical);                       // Set the screen to vertical mode.
   basicCommand(text_color_white);                   // Set text color to white.
 #endif
@@ -2208,7 +2205,7 @@ byte showMenu()                                     // Lets the user select whic
 
 void printRawSignal()                               // Prints the entire timings array to the serial output. Useful for debugging.
 {
-  Serial.print(F("__printing signal_")); Serial.println(edges+1);
+  Serial.print(F("__printing_signal_")); Serial.println(edges+1);
   for( int j = startPosition; j <= endPosition; j++ ){
     Serial.print(F(",")); Serial.print(timings[j]);
     if( j % 16 == 15 ){ Serial.println(); }
@@ -2329,7 +2326,9 @@ byte touchScreenButtonPress()
 // Show the default interface, with numbered buttons that play signals when pressed.
 void showTouchButtons()
 {
-  //Serial.println(F("__showTouchButtons "));
+#ifdef DEBUG_SCREEN
+  Serial.println(F("__showTouchButtons "));
+#endif
   basicCommand(fill_black);
   roundedRectangle( 0, 0, (int)TOUCHSCREEN_WIDTH / 2, BUTTON_HEIGHT, (int)BUTTON_HEIGHT / 2, 31 ); // blue rounded rectangle.
   setCur(BUTTON_PADDING,BUTTON_PADDING);
@@ -2351,8 +2350,9 @@ void showTouchButtons()
 
 void simpleHorizontal(int y)                        // Draw a horizontal line on the screen.
 {
-  //Serial.println(F("SIMPLEHORIZONTAL:"));
+
 #ifdef DEBUG_SCREEN
+  Serial.println(F("SIMPLEHORIZONTAL:"));
   Serial.print(F("y: ")); Serial.println(y);
 #endif
   byte command[12] = {0x7E, 0x0A, 0x23, 0,0, highByte(y), lowByte(y), 0,240, 255, 255, 0xEF,};
@@ -2434,8 +2434,8 @@ void drawPix(int x, int y, int c) // Draw a pixel on the screen.
 // This function places the text cursor anywhere on the screen.
 void setCur(int x, int y)
 {
-  //Serial.println(F("SETCUR"));
 #ifdef DEBUG_SCREEN  
+  Serial.println(F("SETCUR"));
   Serial.print(F("x: ")); Serial.println(x);
   Serial.print(F("y: ")); Serial.println(y);
 #endif
@@ -2451,7 +2451,9 @@ void setCur(int x, int y)
 // This function outputs a variable number to the screen. It can show negative and positive numbers. It cannot show floats.
 void displayNumber(signed int number)
 {
-  //Serial.print(F("DISPLAYNUMBER (")); Serial.println(number); 
+#ifdef DEBUG_SCREEN
+  Serial.print(F("DISPLAYNUMBER (")); Serial.println(number); 
+#endif
   byte command[8] = {0x7E, 0x06, 0x13, 0x01, 0x0A, highByte(number), lowByte(number), 0xEF,};
   for( int i=0; i < sizeof(command); i++ ){
     mySerial.write( command[i] );
@@ -2465,10 +2467,18 @@ void displayNumber(signed int number)
 void readResponse()
 {
   //Serial.println(F("READRESPONSE"));
-
-  if( mySerial.available() < 5 ){                   // Any response should be at least 5 bytes.
+  if( mySerial.available() == 0 ){ 
     return;
   }
+  else if( mySerial.available() < 5 ){                   // Any response should be at least 5 bytes.
+#ifdef DEBUG_SCREEN
+    Serial.print(F("Too short response from screen (")); Serial.println( mySerial.available() );
+#endif
+    return;
+  }
+
+  Serial.println(F("GOT RESPONSE"));
+  
   boolean savingMessage = false;
   //byte metaData[metadataArraySize];               // An array to store the received serial data // TODO: use the metadata array instead. It's just as long, and their uses don't overlap.
   byte metaDataPosition = 0;                        // The metaData array is recycled: here is holds incoming serial data.
@@ -2478,7 +2488,7 @@ void readResponse()
   while( mySerial.available() ){                    //  By not checking for this the entire buffer is always cleared.
     rc = mySerial.read();
 #ifdef DEBUG_SCREEN
-    Serial.print(rc); Serial.print(F(" "));
+    Serial.print(rc); Serial.print(F("-"));
 #endif
     if( savingMessage == true ){                    // We are now in the part of the response that is the message we were looking for.
       if(rc != endMarker){
@@ -2532,7 +2542,9 @@ void readResponse()
 // This function can send basic string command that don't have any variable parts in them.
 void basicCommand(const char* cmd)
 {
-  //Serial.println(F("BASIC COMMAND"));
+#ifdef DEBUG_SCREEN
+  Serial.println(F("BASIC COMMAND"));
+#endif
   if( mySerial.available() ){                       // If necessary, clear old messages from the serial buffer.
     clearReceivedBuffer();
   } 
@@ -2555,7 +2567,9 @@ void basicCommand(const char* cmd)
 // This function can be activated after sending a command. It will wait until a response has arrived (or 100 milliseconds have passed), and then allow the Arduino to continue.
 void waitForResponse(byte expectedBytes) // From the touch screen
 {
-  //Serial.println(); Serial.println(F("WAITING FOR RESPONSE"));
+#ifdef DEBUG_SCREEN
+  Serial.println(); Serial.println(F("WAITING FOR RESPONSE FROM SCREEN"));
+#endif
   byte b = 0;
   while( mySerial.available() < expectedBytes && b < 100){
     b++;
@@ -2590,7 +2604,7 @@ int touchToY(int y)
 
 void clearReceivedBuffer()
 {
-  //Serial.print(F("cleaning:")); 
+  Serial.print(F("cleaning:")); 
   while( mySerial.available() ){
     char x = mySerial.read();
     Serial.print(x);
