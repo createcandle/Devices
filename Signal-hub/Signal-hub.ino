@@ -28,11 +28,12 @@
  * 
  * SETTINGS */
 
- 
-#define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommend.  
+
+#define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommended.  
 
 #define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // If you are using the Candle Manager, the password will be changed to what you chose in the interface automatically. Be aware, the length of the password has an effect on memory use.
 
+#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
  /* END OF SETTINGS
   *  
@@ -92,6 +93,12 @@
 #define TOUCH_SCREEN_RX_PIN 7                       // The receive (RX) pin for the touchscreen. This connects to the transmit (TX) pin of the touchscreen.
 #define TOUCH_SCREEN_TX_PIN 8                       // The receive (TX) pin for the touchscreen. This connects to the transmit (RX) pin of the touchscreen.
 
+#ifdef RF_NANO
+// If you are using an RF-Nano, you have to switch CE and CS pins.
+#define MY_RF24_CS_PIN 9                            // Used by the MySensors library.
+#define MY_RF24_CE_PIN 10                           // Used by the MySensors library.
+#endif
+
 
 // This code has an extra pattern finding trick. Using brute force it will try to find a pattern in the data. The downside is it takes a lot of time to analyse signals this way. 
 // This means the system might not detect a signal because it is busy analysing a bad signal. It's up to you if you want to use it.
@@ -105,8 +112,8 @@
 
 // MySensors: Choose your desired radio power level. High power can cause issues on cheap Chinese NRF24 radio's.
 //#define MY_RF24_PA_LEVEL RF24_PA_MIN
-#define MY_RF24_PA_LEVEL RF24_PA_LOW
-//#define MY_RF24_PA_LEVEL RF24_PA_HIGH
+//#define MY_RF24_PA_LEVEL RF24_PA_LOW
+#define MY_RF24_PA_LEVEL RF24_PA_HIGH
 //#define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors advanced security
