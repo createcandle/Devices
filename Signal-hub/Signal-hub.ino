@@ -188,10 +188,13 @@ PROGMEM const byte text_color_white[] = {0x04, 0x02, 0xFF, 0xFF, 0xEF,}; // whit
 
 PROGMEM const byte resetTFT[] =         {0x02, 0x05, 0xEF,}; // Resets the TFT. But has no real effect.
 PROGMEM const byte testTFT[] =          {0x02, 0x00, 0xEF}; // Test the TFT, should respond with "OK".
-PROGMEM const byte backlight_on[] =     {0x03, 0x06, 0x60, 0xEF}; // Backlight intensity to half-full
+PROGMEM const byte backlight_on[] =     {0x03, 0x06, 0xFF, 0xEF}; // Backlight intensity to half-full
 PROGMEM const byte backlight_off[] =    {0x03, 0x06, 0x00, 0xEF}; // Backlight intensity to zero
 //PROGMEM const byte serialSpeedUp[] =    {0x03, 0x40, 0x03, 0xEF,}; // Sets communication speed to 57600 (from 9600)
-//PROGMEM const byte serialSlowDown[] =   {0x03, 0x40, 0x00, 0xEF,}; // Sets communication speed to 9600 again. Oddly enough, it seems it works fastest at this speed..
+PROGMEM const byte serialSlowDown[] =   {0x03, 0x40, 0x00, 0xEF,}; // Sets communication speed to 9600 again. Oddly enough, it seems it works fastest at this speed..
+
+PROGMEM const byte test[] =   {0x02, 0x00, 0xEF,}; // Test message
+
 
 #endif
 
@@ -223,7 +226,7 @@ byte prevButtonState = 100;
 #define KEYPAD_BUTTON_COUNT 0                       // How many buttons does your keypad have? Leave at 0 if you are using a touch screen.
 
 #if KEYPAD_BUTTON_COUNT > 0
-boolean buttonsToggleStatus[KEYPAD_BUTTON_COUNT + 1];  // Array to hold the buttons' toggle status (if the button has an on/off signal). For simple signals buttonsToggleStatus[x] is always 0. For on/off signals this actually switches between 0 and 1. For simplicity, the zero position of the array is ignored.
+boolean buttonsToggleStatus[KEYPAD_BUTTON_COUNT + 1]; // Array to hold the buttons' toggle status (if the button has an on/off signal). For simple signals buttonsToggleStatus[x] is always 0. For on/off signals this actually switches between 0 and 1. For simplicity, the zero position of the array is ignored.
 #endif
 
 
@@ -281,12 +284,13 @@ boolean captureFinished = false;                    // If the entire edges array
 byte bucketCount = 0;                               // How many different types of timings are there in the signal. This is used to tighten up the signal.
 boolean connectedToNetwork = false;                 // Are we connected to the local MySensors network? Used to display the 'w' connection icon.
 byte lengthOfSignalWeAreWaitingFor = 3;             // Used when recording on-off signals. The off-signal should have the same byte length as the on signal.     
-byte brightnessTimer = 255;                         // When this reaches 0 the screen is turned off.
+byte brightnessTimer = 0;                           // When this reaches 0 the screen is turned off.
 
 #define PLAYLIST_SIZE 6
 byte playlist[PLAYLIST_SIZE];                       // Sometimes multiple demands to play a signal come in. This holds all the signals we should replay one after the other
 byte playlist_position = 0;                         // Signals that should be replayed are placed in a playlist, so they can be played one after the other of multiple should be played.
 
+byte response_position = 0; // EXPERIMENT TO DEAL WITH SERIAL BETTER
 
 // DESCRIPTION BIT STATES
 
@@ -516,8 +520,9 @@ void setup()
 #endif
 
 #ifdef HAS_TOUCH_SCREEN
+  wait(2000);
   mySerial.begin(9600);
-  wait(1500);
+  wait(2000);
 
 #ifdef DEBUG
   for( int t = EEPROM_STORAGE_START - 1; t < EEPROM.length(); t++ ){
@@ -526,9 +531,37 @@ void setup()
   Serial.print(F("replay button slots: ")); Serial.println( howManyReplayButtonsWillFitOnScreen );
 #endif
 
-  basicCommand(resetTFT);                           //
+
+#ifdef DEBUG_SCREEN
+  Serial.println(F("BC: test"));
+  basicCommand(test);
+#endif
+
+#ifdef DEBUG_SCREEN
+  Serial.println(F("BC: serial_slow"));
+#endif
+  //basicCommand(serialSlowDown);  
+  
+#ifdef DEBUG_SCREEN
+ Serial.println(F("BC: reset"));
+#endif
+  //basicCommand(resetTFT);                           //
+
+#ifdef DEBUG_SCREEN
+  Serial.println(F("BC: backlight_on"));
+#endif
+  basicCommand(backlight_on);
+
+#ifdef DEBUG_SCREEN
+ Serial.println(F("BC: vertical"));
+#endif
   basicCommand(set_vertical);                       // Set the screen to vertical mode.
+
+#ifdef DEBUG_SCREEN
+  Serial.println(F("BC: white text"));
+#endif
   basicCommand(text_color_white);                   // Set text color to white.
+
 #endif
 
   // Check if there is a network connection
@@ -557,10 +590,6 @@ void setup()
   updateDisplay(LISTENING);                         // Show "Listening" on the display.
   clearTimingsArray();                              // Reset everything, so that we are ready to listen for a signal.
 
-#ifdef HAS_TOUCH_SCREEN
-  basicCommand(backlight_on);
-#endif
-
 #ifdef DEBUG
   Serial.print(F("Free RAM after setup = ")); Serial.println(freeRam());
 #endif
@@ -570,7 +599,11 @@ void setup()
  
 void loop()
 {
-
+  //readResponse();
+  //wait(200);
+  //Serial.print(F("."));
+  //readResponse();
+  
   // This part of the code checks the radio receiver pins.
   if( !captureFinished ){
     //Serial.print(F("|"));
@@ -640,7 +673,7 @@ void loop()
   else {                                            // SignalCapture is finished.
     captureFinished = false;                        // Reset for next round.
     boolean signalIsOk = false;
-    
+    //Serial.println(F("DONE CAPTURING"));
 #ifdef HAS_TOUCH_SCREEN    
     readResponse();
 #endif
@@ -718,7 +751,7 @@ void loop()
         }
       }
       else {
-        //Serial.println(F("Low quality signal"));
+        Serial.println(F("Low quality signal"));
       }
       clearTimingsArray();
     }
@@ -728,7 +761,7 @@ void loop()
     }
 
 
-    // If demanded, we send the new button states.
+    // If a presentation has been requested, we send the new button states.
     if( resend_button_states ){
       resend_button_states = 0;
       send_values();
@@ -761,9 +794,13 @@ void loop()
       // Turn screen off after a while
       if( brightnessTimer > 1){
         brightnessTimer--;
+        //Serial.println(brightnessTimer);
       }
       else if( brightnessTimer == 1 ){
         brightnessTimer = 0;
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: backlight_off"));
+#endif
         basicCommand(backlight_off);                // Set the screen to vertical mode.
       }
       
@@ -1366,19 +1403,46 @@ byte scanEeprom()
           
           if( amountOfStoredReplayableSignalsScan > pageStart && amountOfStoredReplayableSignalsScan <= pageStart + howManyReplayButtonsWillFitOnScreen ){
             if( bitRead(descriptionData, DESCRIPTION_ON_OFF) == 0 ){
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: 4 commands for next page button:"));
+#endif
               roundedRectangle( 0, BUTTON_HEIGHT + (itemNumber * BUTTON_HEIGHT), TOUCHSCREEN_WIDTH, BUTTON_HEIGHT, (int)BUTTON_HEIGHT/3, 31727 ); // dark grey rounded rectangle.
               setCur( BUTTON_PADDING, BUTTON_PADDING + BUTTON_HEIGHT + (itemNumber * BUTTON_HEIGHT) );
               displayNumber(itemNumber + (visibleReplayButtonsPage * howManyReplayButtonsWillFitOnScreen) + 1 );
               basicCommand(play);
             }
             else {
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: roundedRect"));
+#endif
               roundedRectangle( 0, BUTTON_HEIGHT + (itemNumber * BUTTON_HEIGHT), (int)TOUCHSCREEN_WIDTH/2, BUTTON_HEIGHT, (int)BUTTON_HEIGHT/3, 31727 ); // dark grey rounded rectangle.
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: setCur"));
+#endif
               setCur( BUTTON_PADDING, BUTTON_PADDING + BUTTON_HEIGHT + (itemNumber * BUTTON_HEIGHT) );
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: display_number"));
+#endif
               displayNumber(itemNumber + (visibleReplayButtonsPage * howManyReplayButtonsWillFitOnScreen) + 1 );
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: off"));
+#endif
               basicCommand(off);
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: roundedRect"));
+#endif
               roundedRectangle( (int)TOUCHSCREEN_WIDTH/2, BUTTON_HEIGHT + (itemNumber * BUTTON_HEIGHT), (int)TOUCHSCREEN_WIDTH/2, BUTTON_HEIGHT, (int)BUTTON_HEIGHT/3, 31727 ); // dark grey rounded rectangle.
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: setcur"));
+#endif
               setCur( BUTTON_PADDING + (TOUCHSCREEN_WIDTH / 2), BUTTON_PADDING + BUTTON_HEIGHT + (itemNumber * BUTTON_HEIGHT) );
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: display_number"));
+#endif
               displayNumber(itemNumber + (visibleReplayButtonsPage * howManyReplayButtonsWillFitOnScreen) + 1 );
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: on"));
+#endif
               basicCommand(on);
             }
           }
@@ -1865,6 +1929,9 @@ void updateDisplay(byte currentStatus)              // Show info on the display
 
     // If we are copying a signal, show the cancel button.
     if( state > MENU_NEW && state < MENU_DELETE_ALL + 5 ){
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: fill_black"));
+#endif
       basicCommand(fill_black);
       roundedRectangle( 0, 0, (int)TOUCHSCREEN_WIDTH / 2, BUTTON_HEIGHT, 10, 31 ); // Draw a blue (31) rounded rectangle, with a 10px radius.
       setCur(BUTTON_PADDING,BUTTON_PADDING);
@@ -2045,7 +2112,7 @@ byte showMenu()                                     // Lets the user select whic
   touchY = TOUCHSCREEN_HEIGHT;
   touched = true;
 #ifdef DEBUG_SCREEN
-  Serial.println( mySerial.available() );
+  Serial.print(F("myserial.available:")); Serial.println( mySerial.available() );
 #endif
 
   while( stayInMenu ){
@@ -2067,6 +2134,9 @@ byte showMenu()                                     // Lets the user select whic
         break;
       }
       else {
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: fill_blue"));
+#endif
         basicCommand(fill_blue);                    // Set the background color to blue
         setCur(BUTTON_PADDING,BUTTON_PADDING);      // Set the text cursor at the top left of the screen
         writeText(0);                               // Display the Cancel item. All menu's have it.
@@ -2245,6 +2315,9 @@ void displayNetworkStatus()                         // Show connection icon on t
 #ifdef HAS_TOUCH_SCREEN
   if( connectedToNetwork ){
     setCur(TOUCHSCREEN_WIDTH - 30, BUTTON_PADDING );
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: show W icon"));
+#endif
     basicCommand(w);
   }
 #endif
@@ -2335,10 +2408,21 @@ void showTouchButtons()
 {
 #ifdef DEBUG_SCREEN
   Serial.println(F("__showTouchButtons "));
+
+  Serial.println(F("BC: fill_black"));
 #endif
   basicCommand(fill_black);
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: roundedRect"));
+#endif
   roundedRectangle( 0, 0, (int)TOUCHSCREEN_WIDTH / 2, BUTTON_HEIGHT, (int)BUTTON_HEIGHT / 2, 31 ); // blue rounded rectangle.
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: set_cur"));
+#endif
   setCur(BUTTON_PADDING,BUTTON_PADDING);
+#ifdef DEBUG_SCREEN
+          Serial.println(F("BC: menu"));
+#endif
   basicCommand(menu);
 
   state = DISPLAY_REPLAY_BUTTONS;                   // This state is used to focus the scanEeprom function on displaying the replay buttons.
@@ -2367,7 +2451,7 @@ void simpleHorizontal(int y)                        // Draw a horizontal line on
     mySerial.write( command[i] );
     //Serial.print(command[i],HEX); Serial.print(F(" "));
   }
-  waitForResponse(5);
+  waitForResponse();
 }
 
 
@@ -2389,7 +2473,7 @@ void roundedRectangle(int x, int y, int w, int h, int r, int c) // Draw a pixel 
     mySerial.write( command[i] );
     //Serial.print(command[i],HEX); Serial.print(F(" "));
   }
-  waitForResponse(5);
+  waitForResponse();
 }
 
 
@@ -2409,14 +2493,15 @@ void writeText(byte textID)
     
     for( byte i=0; i < 5; i++ ){
       if(j+i < stringLength){
-        command[3+i] = pgm_read_byte(MessageTable[textID].Description + j + i);
+        command[3+i] = pgm_read_byte(MessageTable[textID].Description + j + i); // It works in batches of 5 characters..
       }
     }
     for( int i=0; i < sizeof(command); i++ ){
       mySerial.write( command[i] );
       //Serial.print(command[i],HEX); Serial.print(F(" "));
     }
-    waitForResponse(5);
+    waitForResponse();
+    //wait(20);
     j = j + 5;
   }
 }
@@ -2433,7 +2518,7 @@ void drawPix(int x, int y, int c) // Draw a pixel on the screen.
     mySerial.write( command[i] );
     //Serial.print(command[i],HEX); Serial.print(F(" "));
   }
-  waitForResponse(5);
+  waitForResponse();
 }
 #endif
 
@@ -2451,7 +2536,7 @@ void setCur(int x, int y)
     mySerial.write( command[i] );
     //Serial.print(command[i],HEX); Serial.print(F(" "));
   }
-  waitForResponse(5);
+  waitForResponse();
 }
 
 
@@ -2466,32 +2551,47 @@ void displayNumber(signed int number)
     mySerial.write( command[i] );
     //Serial.print(command[i],HEX); Serial.print(F(" "));
   }
-  waitForResponse(5);
+  waitForResponse();
 }
 
 
 // This function reads the serial data (if available) from the screen. The implemented commands it can detect are 'ok', and the touch coordinates.
 void readResponse()
 {
+  volatile int availableSerialCount = mySerial.available();
   //Serial.println(F("READRESPONSE"));
-  if( mySerial.available() == 0 ){ 
-    return;
-  }
-  else if( mySerial.available() < 5 ){                   // Any response should be at least 5 bytes.
-#ifdef DEBUG_SCREEN
-    Serial.print(F("Too short response from screen (")); Serial.println( mySerial.available() );
-#endif
+  if( availableSerialCount == 0 ){ 
     return;
   }
 
-  Serial.println(F("GOT RESPONSE"));
-  
-  boolean savingMessage = false;
+  boolean savingMessage = false;                    // When touch message, this starts recording data into an array for analysis.
   //byte metaData[metadataArraySize];               // An array to store the received serial data // TODO: use the metadata array instead. It's just as long, and their uses don't overlap.
   byte metaDataPosition = 0;                        // The metaData array is recycled: here is holds incoming serial data.
   byte startMarker = 0x7E;                          // Any response from the screen will start with this.
   byte endMarker = 0xEF;                            // Any response from the screen will end with this.
   byte rc;                                          // Hold the byte form the serial stream that we're examining.
+
+
+  
+  byte c = mySerial.peek();
+  Serial.print(F("SOME SERIAL DATA. Available:")); Serial.println(  availableSerialCount );
+  Serial.print(F("Peek:")); Serial.println(  c );
+  if( c != startMarker ){
+    rc = mySerial.read();
+    Serial.print(F("throwing away left over myserial byte:")); Serial.println(rc);
+    return;
+  }
+  
+  if( availableSerialCount < 5 ){                   // Any response should be at least 5 bytes.
+#ifdef DEBUG_SCREEN
+    Serial.print(F("Too short response from screen (")); Serial.println( mySerial.available() );
+#endif
+    return;
+  }
+#ifdef DEBUG_SCREEN
+  Serial.println(F("GOT RESPONSE"));
+#endif
+
   while( mySerial.available() ){                    //  By not checking for this the entire buffer is always cleared.
     rc = mySerial.read();
 #ifdef DEBUG_SCREEN
@@ -2515,10 +2615,14 @@ void readResponse()
 #ifdef DEBUG_SCREEN
           Serial.print(F("touchX=")); Serial.println(touchX);
           Serial.print(F("touchY=")); Serial.println(touchY);
+          Serial.print(F("brightnessTimer=")); Serial.println(brightnessTimer);
 #endif
 
           if( brightnessTimer == 0 ){
-            basicCommand(backlight_on);                // Set the screen to vertical mode.
+#ifdef DEBUG_SCREEN
+          Serial.println(F("Turning on backlight"));
+#endif
+            basicCommand(backlight_on);                // If the screen was touched but the backlight was off, turn the backlight on.
           }
           else{
             touched = true;                           // To indicate that a touch event has just occured.
@@ -2541,7 +2645,9 @@ void readResponse()
     }
     if( rc == startMarker ){                        // Once a valid startMarker is found, we start saving the message into the array.
       savingMessage = true;
-      //Serial.print(F("(startMarker) "));
+#ifdef DEBUG_SCREEN
+      Serial.print(F("(startMarker) "));
+#endif
     } 
   }
 }
@@ -2562,37 +2668,57 @@ void basicCommand(const char* cmd)
     mySerial.write( pgm_read_byte(&cmd[b]) );
     //Serial.print( pgm_read_byte(&cmd[b]),HEX ); Serial.print(F(" "));
     if( pgm_read_byte(&cmd[b]) == 0xEF ){           // This breaks out of the loop.
-      waitForResponse(b);
+      //waitForResponse(b);
       b = MAX_BASIC_COMMAND_LENGTH; 
     } 
     b++;
   }
-  waitForResponse(5);
+  waitForResponse();
 }
 
 
 // This function can be activated after sending a command. It will wait until a response has arrived (or 100 milliseconds have passed), and then allow the Arduino to continue.
-void waitForResponse(byte expectedBytes) // From the touch screen
+//void waitForResponse(byte expectedBytes) // From the touch screen
+
+void waitForResponse() // From the touch screen
 {
 #ifdef DEBUG_SCREEN
   Serial.println(); Serial.println(F("WAITING FOR RESPONSE FROM SCREEN"));
+  Serial.print(F("-available now: ")); Serial.println( mySerial.available() ); 
 #endif
   byte b = 0;
-  while( mySerial.available() < expectedBytes && b < 100){
+  while( mySerial.available() == 0 && b < 250){
     b++;
     wait(1);
   }
 #ifdef DEBUG_SCREEN
   Serial.print(F("wait time: ")); Serial.println(b);
 #endif  
-  wait(10);                                        // A small extra delay seems to be required.
-  readResponse();
+  if( mySerial.available() > 0 ){
+    wait(2); // Perhaps some more bytes will show up.
+    while( mySerial.available() > 0 ){                // Throwing away the response. All we care about is touch messages.
+      byte x = mySerial.read();
+      Serial.print(x); Serial.print(F("-"));
+    }
+    Serial.println();
   wait(10);
+  }
+  else if( b == 250 ){
+    Serial.println(F("Touch screen did not respond?"));
+  }
 }
+
+
 
 void turnOnScreen()
 {
+#ifdef DEBUG_SCREEN
+  Serial.print(F("__turnonscreen() (")); Serial.println(brightnessTimer);
+#endif
   if( brightnessTimer == 0 ){
+#ifdef DEBUG_SCREEN
+    Serial.println(F("BC:backlight_on"));
+#endif
     basicCommand(backlight_on);                     // Turn on the screen backlight again.
   }
   brightnessTimer = 255;
@@ -2611,7 +2737,7 @@ int touchToY(int y)
 
 void clearReceivedBuffer()
 {
-  Serial.print(F("cleaning:")); 
+//Serial.print(F("cleaning:")); 
   while( mySerial.available() ){
     char x = mySerial.read();
     Serial.print(x);
@@ -2632,7 +2758,7 @@ void receive(const MyMessage &message)
   else if( message.type==V_STATUS ){
     Serial.print(F("-Requested status: ")); Serial.println(message.getBool());
 
-    //turnOnScreen(); // Handled by display function now.
+    // turnOnScreen(); // Handled by display function now.
 
 #if !(defined(HAS_TOUCH_SCREEN))
     if( message.sensor < 10 && message.getBool() ){
