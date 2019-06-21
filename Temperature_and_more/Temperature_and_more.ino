@@ -3,9 +3,9 @@
  * Temperature and more sensor
  * 
  * This device can measure:
- * - temperature
- * - humidity 
- * - airpressure (barometer). 
+ * - Temperature
+ * - Humidity 
+ * - Air pressure (barometer). 
  * 
  * By looking at changes in air pressure it can predict the weather. 
  * - unknown    (it's still calculating)
@@ -17,18 +17,22 @@
  * 
  * You can use it indoor or outdoor. It does not have to be outside to be able to predict the weather.
  * 
- * The main sensor used is the Bosch BME280. To learn more about it you can check out its datasheet: https://cdn.sparkfun.com/assets/learn_tutorials/4/1/9/BST-BME280_DS001-10.pdf
+ * The main sensor used is the Bosch BME280.
  *
  *
  * SETTINGS */ 
 
 // You can enable and disable the settings below by adding or removing double slashes ( // ) in front of a line.
 
+#define INTERVALSBETWEENSENDING 60                  // Sleep time between reads for the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute. MAximum is 255 (because the value is stored as a byte, instead of the bigger 'int')
+
 #define HAS_DISPLAY                                 // Did you connect a display?
 
-//#define FAHRENHEIT                                  // Do you want temperature measurements to be in Fahrenheit?
+//#define FAHRENHEIT                                // Do you want temperature measurements to be in Fahrenheit?
 
-//#define MY_SECURITY_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
+
+#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
 
  /* END OF SETTINGS
@@ -37,11 +41,9 @@
  *
  */
 
+//#define DEBUG // General debug option, give extra information via the serial output when enabled.
+//#define MY_DEBUG // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
-
-//
-// SETTINGS
-//
 
 // Enable and select the attached radio type
 #define MY_RADIO_RF24                               // This is a common and simple radio used with MySensors. Downside is that it uses the same frequency space as WiFi.
@@ -51,26 +53,24 @@
 
 // MySensors: Choose your desired radio power level. High power can cause issues on cheap Chinese NRF24 radio's.
 //#define MY_RF24_PA_LEVEL RF24_PA_MIN
-//#define MY_RF24_PA_LEVEL RF24_PA_LOW
-#define MY_RF24_PA_LEVEL RF24_PA_HIGH
+#define MY_RF24_PA_LEVEL RF24_PA_LOW
+//#define MY_RF24_PA_LEVEL RF24_PA_HIGH
 //#define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors security
-#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7           // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
+//#define MY_SECURITY_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
+//#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7           // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
 
 // Mysensors advanced settings
 #define MY_TRANSPORT_WAIT_READY_MS 10000            // Try connecting for 10 seconds. Otherwise just continue.
 //#define MY_RF24_CHANNEL 100                       // In EU the default channel 76 overlaps with wifi, so you could try using channel 100. But you will have to set this up on every device, and also on the controller.
-//#define MY_RF24_DATARATE RF24_1MBPS               // Slower datarate makes the network more stable?
+#define MY_RF24_DATARATE RF24_1MBPS                 // The datarate influences range. 1MBPS is the most widely supported. 250KBPS will give you more range.
 //#define MY_NODE_ID 10                             // Giving a node a manual ID can in rare cases fix connection issues.
 //#define MY_PARENT_NODE_ID 0                       // Fixating the ID of the gatewaynode can in rare cases fix connection issues.
 //#define MY_PARENT_NODE_IS_STATIC                  // Used together with setting the parent node ID. Daking the controller ID static can in rare cases fix connection issues.
 #define MY_SPLASH_SCREEN_DISABLED                   // Saves a little memory.
 //#define MY_DISABLE_RAM_ROUTING_TABLE_FEATURE      // Saves a little memory.
-
-// Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
-//#define MY_DEBUG 
 
 // MySensors devices form a mesh network by passing along messages for each other. Do you want this node to also be a repeater?
 #define MY_REPEATER_FEATURE                       // Add or remove the two slashes at the beginning of this line to select if you want this sensor to act as a repeater for other sensors. If this node is on battery power, you probably shouldn't enable this.
@@ -80,7 +80,6 @@
 
 // Are you using this sensor on battery power?
 //#define BATTERY_POWERED                           // Just remove the two slashes at the beginning of this line if your node is battery powered. It will then go into deep sleep as much as possible. While it's sleeping it can't work as a repeater!
-
 
 
 // LIBRARIES
@@ -98,7 +97,6 @@ SoftwareSerial mySerial(8,7);                       // RX, TX
 
 
 // VARIABLES YOU CAN CHANGE
-#define INTERVALSBETWEENSENDING 60                  // Sleep time between reads for the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute. MAximum is 255 (because the value is stored as a byte, instead of the bigger 'int')
 #define INTERVAL 1000                               // When active, the main check occurs every 1000 milliseconds, which is a second.
 #define COMPARETEMPERATURE 1                        // Send temperature only if it changed? 1 = Yes 0 = No. Can save battery.
 #define COMPAREHUMIDITY 1                           // Send temperature only if changed? 1 = Yes 0 = No. Can save battery.
@@ -129,7 +127,7 @@ bool fahrenheit = false;
 #define CLOUDY 2                                    // "Slowly falling L-Pressure ", "Cloudy/Rain "
 #define UNSTABLE 3                                  // "Quickly rising H-Press",     "Not Stable"
 #define THUNDERSTORM 4                              // "Quickly falling L-Press",    "Thunderstorm"
-#define UNKNOWNN 5                                   // "Unknown (More Time needed)
+#define UNKNOWNN 5                                  // "Unknown (More Time needed)
 byte lastForecast = 5;                              // Stores the previous forecast. Icons are only redrawn if necessary.
 const byte LAST_SAMPLES_COUNT = 5;
 float lastPressureSamples[LAST_SAMPLES_COUNT];
@@ -205,8 +203,8 @@ void presentation()  {
 
   // Tell the MySensors gateway what kind of sensors this node has, and what their ID's on the node are, as defined in the code above.
   present(TEMP_CHILD_ID, S_TEMP, F("Temperature")); wait(RADIO_DELAY);
-  present(HUM_CHILD_ID, S_HUM, F("Humidity percentage")); wait(RADIO_DELAY);
-  present(BARO_CHILD_ID, S_BARO, F("Barometer (HPa)")); wait(RADIO_DELAY);
+  present(HUM_CHILD_ID, S_HUM, F("Humidity")); wait(RADIO_DELAY);
+  present(BARO_CHILD_ID, S_BARO, F("Barometer")); wait(RADIO_DELAY);
 }
 
 
@@ -235,11 +233,13 @@ void loop()
 
   if(millis() - previousMillis >= INTERVAL){        // Main loop, runs every second.
     previousMillis = millis();                      // Store the current time as the previous measurement start time.
+    
     if(intervalCounter >= INTERVALSBETWEENSENDING){
       intervalCounter = 0;
     }else{
       intervalCounter++;
     }
+    
     wdt_reset(); // Reset the watchdog timer
 
 
@@ -333,6 +333,7 @@ void loop()
 
     }
 
+
     //
     // HUMIDITY
     //
@@ -380,6 +381,7 @@ void loop()
       
 #endif
     }
+
 
     //
     // PRESSURE
@@ -580,6 +582,8 @@ void loop()
 
   }
 }
+
+
 
 float getLastPressureSamplesAverage()
 {
