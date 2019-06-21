@@ -26,8 +26,8 @@
 
 //#define HAS_DISPLAY                                 // Did you connect an OLED display? If you connect a display you can send text messages to display on it.
 
-//#define BINARY_ACTUATOR1_SELF_LOCKING                 // Turn digital output 1 off automatically? Should digital output 1 turn itself off after a little while?
-//#define BINARY_ACTUATOR2_SELF_LOCKING                 // Turn digital output 2 off automatically? Should digital output 2 turn itself off after a little while?
+//#define BINARY_ACTUATOR1_SELF_LOCKING               // Turn digital output 1 off automatically? Should digital output 1 turn itself off after a little while?
+//#define BINARY_ACTUATOR2_SELF_LOCKING               // Turn digital output 2 off automatically? Should digital output 2 turn itself off after a little while?
 
 #define SELF_LOCKING_DELAY 3                          // Turn off delay. If you want a digital output to turn itself off again after a short amount of time, how many seconds should pass before this happens?
 
@@ -67,8 +67,8 @@
 //#define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors security
-//#define MY_SECURITY_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
-//#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7           // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
+//#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
+//#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
 
 // Mysensors advanced settings
@@ -90,7 +90,7 @@
 // Are you using this sensor on battery power?
 //#define BATTERY_POWERED                           // Just remove the two slashes at the beginning of this line if your node is battery powered. It will then go into deep sleep as much as possible. While it's sleeping it can't work as a repeater!
 
-#define RADIO_DELAY 50                             // Gives the radio some space to catch a breath
+#define RADIO_DELAY 50                              // Gives the radio some space to catch a breath
 
 // LIBRARIES
 #include <MySensors.h>                              // The MySensors library. Hurray!
@@ -100,11 +100,11 @@
 
 
 // PINS
-#define BINARY_SENSOR1_PIN 2                         // A push button or switch, for example.
-#define BINARY_SENSOR2_PIN 3                         // A switch that can be in an of or off state, for example.
-#define BINARY_ACTUATOR1_PIN 4                        // A LED or relay, for example.
+#define BINARY_SENSOR1_PIN 2                        // A push button or switch, for example.
+#define BINARY_SENSOR2_PIN 3                        // A switch that can be in an of or off state, for example.
+#define BINARY_ACTUATOR1_PIN 4                      // A LED or relay, for example.
 #define BINARY_ACTUATOR2_PIN 5                        
-#define PWM_ACTUATOR1_PIN 6                           // A servo, for example.
+#define PWM_ACTUATOR1_PIN 6                         // A servo, for example.
 #define PWM_ACTUATOR2_PIN 7
 #define ANALOG_SENSOR1_PIN A0
 #define ANALOG_SENSOR2_PIN A2
@@ -143,17 +143,17 @@ MyMessage text_message(TEXT_STRING1_CHILD_ID, V_TEXT);             // Sets up th
 
 
 // VARIABLES
-boolean desired_binary_actuator1_state = 0;           // 0 or 1
-boolean desired_binary_actuator2_state = 0;           // 0 or 1
-boolean binary_actuator1_state = 0;                   // 0 or 1
-boolean binary_actuator2_state = 0;                   // 0 or 1
+boolean desired_binary_actuator1_state = 0;         // 0 or 1
+boolean desired_binary_actuator2_state = 0;         // 0 or 1
+boolean binary_actuator1_state = 0;                 // 0 or 1
+boolean binary_actuator2_state = 0;                 // 0 or 1
 int desired_binary_actuator1_delay = SELF_LOCKING_DELAY;
 int desired_binary_actuator2_delay = SELF_LOCKING_DELAY;
 
-int desired_pwm_actuator1_state = 0;                  // Between 0 and 100
-int desired_pwm_actuator2_state = 0;                  // Between 0 and 100
-int pwm_actuator1_state = 0;                          // Between 0 and 100
-int pwm_actuator2_state = 0;                          // Between 0 and 100
+int desired_pwm_actuator1_state = 0;                // Between 0 and 100
+int desired_pwm_actuator2_state = 0;                // Between 0 and 100
+int pwm_actuator1_state = 0;                        // Between 0 and 100
+int pwm_actuator2_state = 0;                        // Between 0 and 100
 
 boolean new_binary_sensor1_state = 0;               // 0 or 1
 boolean new_binary_sensor2_state = 0;               // 0 or 1
@@ -167,10 +167,10 @@ int analog_sensor2_state = 0;                       // Between 0 and 1000
 
 
 // SERVOS
-Servo servo1;                                         // create servo object to control a servo
-Servo servo2;                                         // create servo object to control a servo
-byte servo1_maximum_degrees = 180;                    // Does your first servo go to 180 or to 270 degrees?
-byte servo2_maximum_degrees = 180;                    // Does your second servo go to 180 or to 270 degrees?
+Servo servo1;                                       // create servo object to control a servo
+Servo servo2;                                       // create servo object to control a servo
+byte servo1_maximum_degrees = 180;                  // Does your first servo go to 180 or to 270 degrees?
+byte servo2_maximum_degrees = 180;                  // Does your second servo go to 180 or to 270 degrees?
 //boolean slow_servo_movement = false;
 int servo_slow_step = 1024;
 
@@ -179,17 +179,17 @@ int servo_slow_step = 1024;
 #define TEXT_STRING_LENGTH 26
 #ifdef HAS_DISPLAY
 #define OLED_I2C_ADDRESS 0x3C
-#include <SSD1306Ascii.h>                         // Simple drivers for the screen.
-#include <SSD1306AsciiAvrI2c.h>
+#include <SSD1306Ascii.h>                           // Simple drivers for the screen.
+#include <SSD1306AsciiAvrI2c.h>                     // "SSD1306Ascii"
 SSD1306AsciiAvrI2c oled;
-byte screen_vertical_position = 3;                // Used to always show both CO and CO2 levels at the top of the screen.
-char string1[26] = "HELLO WORLD";               // Initial text on display.
+byte screen_vertical_position = 3;                  // Used to always show both CO and CO2 levels at the top of the screen.
+char string1[26] = "HELLO WORLD";                   // Initial text to show on display.
 #endif
 
 
 
 // Timer
-#define MAIN_LOOP_DURATION 1000                        // Main loop delay in milliseconds. 1000 milliseconds = 1 second.
+#define MAIN_LOOP_DURATION 1000                     // Main loop delay in milliseconds. 1000 milliseconds = 1 second.
 static unsigned long lastLoopTime = 0;              // Holds the last time the main loop ran.
 
 
@@ -475,7 +475,7 @@ void receive(const MyMessage &message)
 
   // Text output
   if (message.type == V_TEXT && message.sensor == TEXT_STRING1_CHILD_ID ){
-    memset(string1, 0, sizeof(string1)); // Clear the string holder
+    memset(string1, 0, sizeof(string1));            // Clear the array that holds the string
     strcpy(string1, message.getString());
     Serial.print(F("-New string 1: ")); Serial.println(string1);
     oled.setCursor(0,0);
