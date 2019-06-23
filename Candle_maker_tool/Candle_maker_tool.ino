@@ -24,12 +24,8 @@
 
 // You can enable and disable the settings below by adding or removing double slashes ( // ) in front of a line.
 
-//#define HAS_DISPLAY                                 // Did you connect an OLED display? If you connect a display you can send text messages to display on it.
-
-
-//#define BINARY_SENSOR1_CONNECTED                      // Binary input 1. Did you connect an on/off input on pin 2? For example, this could be a button or a motion sensor. As long as it only output "on" and "off", you can connect it.
-//#define BINARY_SENSOR2_CONNECTED                      // Binary input 2. Did you connect an on/off input on pin 3? For example, this could be a button or a motion sensor. As long as it only output "on" and "off", you can connect it.
-
+//#define BINARY_SENSOR1_CONNECTED                      // Binary sensor 1. Did you connect an on/off input on pin 2? For example, this could be a button or a motion sensor. As long as it only output "on" and "off", you can connect it.
+//#define BINARY_SENSOR2_CONNECTED                      // Binary sensor 2. Did you connect an on/off input on pin 3? For example, this could be a button or a motion sensor. As long as it only output "on" and "off", you can connect it.
 
 //#define ANALOG_SENSOR1_CONNECTED                      // Analog sensor 1. Did you connect an analog sensor on A0?
 //#define ANALOG_SENSOR2_CONNECTED                      // Analog sensor 2. Did you connect an analog sensor on A1?
@@ -44,6 +40,10 @@
 
 //#define PWM_ACTUATOR1_CONNECTED                       // Servo 1. Did you connect a servo on pin 7?
 //#define PWM_ACTUATOR2_CONNECTED                       // Servo 2. Did you connect a servo on pin 8?
+
+//#define HAS_DISPLAY                                 // Did you connect an OLED display? If you connect a display you can send text messages to display on it.
+
+
 
 #define RF_NANO                                       // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
@@ -155,25 +155,25 @@
 // MySensors messages
 #ifdef BINARY_SENSOR1_CONNECTED
 MyMessage binary_sensor_message(BINARY_SENSOR1_CHILD_ID, V_TRIPPED);  
-#elif BINARY_SENSOR2_CONNECTED
+#elif defined(BINARY_SENSOR2_CONNECTED)
 MyMessage binary_sensor_message(BINARY_SENSOR2_CHILD_ID, V_TRIPPED); 
 #endif
 
 #ifdef BINARY_ACTUATOR1_CONNECTED
 MyMessage binary_actuator_message(BINARY_ACTUATOR1_CHILD_ID, V_STATUS);
-#elif BINARY_ACTUATOR2_CONNECTED
+#elif defined(BINARY_ACTUATOR2_CONNECTED)
 MyMessage binary_actuator_message(BINARY_ACTUATOR2_CHILD_ID, V_STATUS);
 #endif
 
 #ifdef PWM_ACTUATOR1_CONNECTED
 MyMessage percentage_message(PWM_ACTUATOR1_CHILD_ID, V_PERCENTAGE);
-#elif PWM_ACTUATOR2_CONNECTED
+#elif defined(PWM_ACTUATOR2_CONNECTED)
 MyMessage percentage_message(PWM_ACTUATOR2_CHILD_ID, V_PERCENTAGE);
 #endif
 
 #ifdef ANALOG_SENSOR1_CONNECTED
 MyMessage analog_sensor_message(ANALOG_SENSOR1_CHILD_ID, V_CUSTOM);
-#elif ANALOG_SENSOR2_CONNECTED
+#elif defined(ANALOG_SENSOR2_CONNECTED)
 MyMessage analog_sensor_message(ANALOG_SENSOR2_CHILD_ID, V_CUSTOM);
 #endif
 
@@ -209,8 +209,10 @@ int analog_sensor2_state = 0;                       // Between 0 and 1000
 
 // SERVOS
 #if defined(PWM_ACTUATOR1_CONNECTED) || defined(PWM_ACTUATOR2_CONNECTED)
-byte servo1_maximum_degrees = 180;                  // Does your first servo go to 180 or to 270 degrees?
-byte servo2_maximum_degrees = 180;                  // Does your second servo go to 180 or to 270 degrees?
+Servo servo1;                                       // Create servo object to control a servo
+Servo servo2;                                       // Create servo object to control a servo
+byte servo1_maximum_degrees = 180;                  // Servo type. Does your first servo go to 180 or to 270 degrees?
+byte servo2_maximum_degrees = 180;                  // Servo type. Does your second servo go to 180 or to 270 degrees?
 //boolean slow_servo_movement = false;
 int servo_slow_step = 1024;
 #endif
@@ -355,6 +357,7 @@ void setup()
 
   // Set the initial position of the PWM output (servo)
 
+
 #ifdef PWM_ACTUATOR1_CONNECTED
   if( loadState(PWM_ACTUATOR1_CHILD_ID) < 101 ){ 
     desired_pwm_actuator1_state = int(loadState(PWM_ACTUATOR1_CHILD_ID));
@@ -364,7 +367,6 @@ void setup()
 #endif
   }
   pinMode(PWM_ACTUATOR1_PIN, OUTPUT); 
-  Servo servo1;                                       // Create servo object to control a servo
   servo1.attach(PWM_ACTUATOR1_PIN);
   servo1.write(percentage_to_servo(pwm_actuator1_state, servo1_maximum_degrees));
   Serial.println(F("I have a servo 1"));
@@ -379,7 +381,6 @@ void setup()
 #endif
   }
   pinMode(PWM_ACTUATOR2_PIN, OUTPUT); 
-  Servo servo2;                                       // create servo object to control a servo
   servo2.attach(PWM_ACTUATOR2_PIN);
   servo2.write(percentage_to_servo(pwm_actuator2_state, servo2_maximum_degrees));
   Serial.println(F("I have a servo 2"));
