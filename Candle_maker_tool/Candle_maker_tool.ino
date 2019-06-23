@@ -63,8 +63,8 @@
  */
 
 
-#define DEBUG // General debug option, give extra information via the serial output when enabled.
-#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
+//#define DEBUG // General debug option, give extra information via the serial output when enabled.
+//#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 #ifdef RF_NANO
 // If you are using an RF-Nano, you have to switch CE and CS pins.
