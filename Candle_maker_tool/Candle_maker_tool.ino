@@ -246,14 +246,14 @@ void presentation()
 #ifdef BINARY_SENSOR1_CONNECTED
   present(BINARY_SENSOR1_CHILD_ID, S_MOTION, F("On-off sensor 1"));
 #endif
-#ifdef BINARY_SENSOR1_CONNECTED
+#ifdef BINARY_SENSOR2_CONNECTED
   present(BINARY_SENSOR2_CHILD_ID, S_MOTION, F("On-off sensor 2"));  
 #endif
 
 #ifdef ANALOG_SENSOR1_CONNECTED
   present(ANALOG_SENSOR1_CHILD_ID, S_CUSTOM, F("Analog sensor 1"));
 #endif
-#ifdef ANALOG_SENSOR1_CONNECTED
+#ifdef ANALOG_SENSOR2_CONNECTED
   present(ANALOG_SENSOR2_CHILD_ID, S_CUSTOM, F("Analog sensor 2")); 
 #endif
 
@@ -267,7 +267,7 @@ void presentation()
 #ifdef PWM_ACTUATOR1_CONNECTED
   present(PWM_ACTUATOR1_CHILD_ID, S_DIMMER, F("Servo control 1"));
 #endif
-#ifdef PWM_ACTUATOR1_CONNECTED
+#ifdef PWM_ACTUATOR2_CONNECTED
   present(PWM_ACTUATOR2_CHILD_ID, S_DIMMER, F("Servo control 2")); 
 #endif
 
@@ -343,7 +343,7 @@ void setup()
   Serial.println(F("I have a binary actuator 1"));
 #endif
 
-#ifdef BINARY_ACTUATOR1_CONNECTED
+#ifdef BINARY_ACTUATOR2_CONNECTED
   if( loadState(BINARY_ACTUATOR2_CHILD_ID) != 255 ){
     boolean original_state = loadState(BINARY_ACTUATOR2_CHILD_ID);
     desired_binary_actuator2_state = original_state;
