@@ -33,9 +33,6 @@
 
 #define RF_NANO                                       // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
-#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
-
-
 
  /* END OF SETTINGS
  *
@@ -67,6 +64,7 @@
 //#define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors security
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
@@ -390,7 +388,7 @@ void loop()
   new_analog_sensor2_state = map(analogRead(ANALOG_SENSOR2_PIN), 0, 1023, 0, 100);
   if( new_analog_sensor2_state != analog_sensor2_state ){
     analog_sensor2_state = new_analog_sensor2_state;
-    Serial.println(F("Analog sensor 2 changed to: ")); Serial.println(analog_sensor1_state);
+    Serial.println(F("Analog sensor 2 changed to: ")); Serial.println(analog_sensor2_state);
     send(analog_sensor_message.setSensor(ANALOG_SENSOR1_CHILD_ID).set(analog_sensor2_state)); wait(RADIO_DELAY);
   }
 
