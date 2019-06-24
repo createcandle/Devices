@@ -103,7 +103,7 @@
 
 
 // PINS
-#define BINARY_SENSOR1_PIN 8                        // A push button or switch, for example.
+#define BINARY_SENSOR1_PIN 2                        // A push button or switch, for example.
 #define BINARY_SENSOR2_PIN 3                        // A switch that can be in an of or off state, for example.
 #define BINARY_ACTUATOR1_PIN 4                      // A LED or relay, for example.
 #define BINARY_ACTUATOR2_PIN 5                        
