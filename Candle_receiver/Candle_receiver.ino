@@ -9,9 +9,7 @@
 
 // You can enable and disable the settings below by adding or removing double slashes ( // ) in front of a line.
 
-#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
-
-#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"
+#define RF_NANO                                     // RF-Nano. Enable this if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
 /* END OF SETTINGS
 *
@@ -47,6 +45,7 @@
 
 
 // Mysensors advanced security
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7           // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
