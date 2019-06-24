@@ -42,10 +42,10 @@ void setup()
 void loop() {
   
   digitalWrite(LED_BUILTIN, HIGH);                            // Turn the LED on (HIGH is the voltage level).
-  delay( (blink_seconds / 2)*1000 );                          // Wait before we continue.
+  delay( blink_seconds*1000 );                          // Wait before we continue.
   
   digitalWrite(LED_BUILTIN, LOW);                             // Turn the LED off by making the voltage LOW.
-  delay( (blink_seconds / 2)*1000 );                          // Wait before we continue.
+  delay( blink_seconds*1000 );                          // Wait before we continue.
   
-  Serial.println("I just blinked my LED");
+  Serial.println(F("I just blinked my LED"));
 }
