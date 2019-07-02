@@ -62,7 +62,6 @@
 
 
 // PINS
-
 #define CO_RX_PIN 3                                 // The RX (receive) pin for the CO sensor. This should be connected to the TX (transmit) pin on the sensor module.
 #define CO_TX_PIN 4                                 // The TX (transmit) pin for the CO sensor. This should be connected to the RX (receive) pin on the sensor module.
 #define CO2_RX_PIN 5                                // The RX (receive) pin for the CO2 sensor. This should be connected to the TX (transmit) pin on the sensor module.
@@ -80,7 +79,7 @@
 #ifdef HAS_DISPLAY
   #define OLED_I2C_ADDRESS 0x3C
   #include <SSD1306Ascii.h>                         // Simple drivers for the screen.
-  #include <SSD1306AsciiAvrI2c.h>
+  #include <SSD1306AsciiAvrI2c.h>                   // "SSD1306Ascii".
   SSD1306AsciiAvrI2c oled;
   byte screen_vertical_position = 3;                // Used to always show both CO and CO2 levels at the top of the screen.
 #endif
