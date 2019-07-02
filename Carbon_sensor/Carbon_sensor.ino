@@ -262,11 +262,11 @@ void loop() {
   
           // Show quality opinion the screen.
           oled.setCursor(60,screen_vertical_position);
-          if (COValue < 450){       oled.print(F("Great"));}
-          else if (COValue < 700){  oled.print(F("Good "));}
+          if (COValue > 0 && COValue < 450){       oled.print(F("GREAT"));}
+          else if (COValue < 700){  oled.print(F("GOOD "));}
           else if (COValue < 1000){ oled.print(F("OK   "));}
-          else if (COValue < 2000){ oled.print(F("Poor "));}
-          else if (COValue < 4500){ oled.print(F("Bad  "));}
+          else if (COValue < 2000){ oled.print(F("POOR "));}
+          else if (COValue < 4500){ oled.print(F("BAD  "));}
           else {
             oled.print(F("Wait..             "));
           }
@@ -295,11 +295,11 @@ void loop() {
   
           // Show quality opinion the screen.
           oled.setCursor(60,screen_vertical_position);
-          if (CO2Value < 450){       oled.print(F("Great"));}
-          else if (CO2Value < 700){  oled.print(F("Good "));}
+          if (CO2Value > 0 && CO2Value < 450){       oled.print(F("GREAT"));}
+          else if (CO2Value < 700){  oled.print(F("GOOD "));}
           else if (CO2Value < 1000){ oled.print(F("OK   "));}
-          else if (CO2Value < 2000){ oled.print(F("Poor "));}
-          else if (CO2Value < 4500){ oled.print(F("Bad  "));}
+          else if (CO2Value < 2000){ oled.print(F("POOR "));}
+          else if (CO2Value < 4500){ oled.print(F("BAD  "));}
           else {
             oled.print(F("Wait..             "));
           }
