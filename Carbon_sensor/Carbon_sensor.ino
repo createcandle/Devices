@@ -26,17 +26,8 @@
 
 #define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
-
-/* 
- * You also need to install the required libraries. In the Arduino program click on "sketch" -> "include library" -> "manage libaries". 
- * For each of the library names below enter their name into the search field, and when it pops up select "install".
- * 
- * MySensors                  This is to create a wireless network between your devices.
- * SSD1306Ascii               This is required if you attach the OLED display.
- * 
- * 
- * You can look through the code below and tweak other things if you like.
- * 
+/* END OF SETTINGS
+ *
  */
 
 //#define MY_DEBUG // MySensors debugging. Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
@@ -198,7 +189,7 @@ void setup() {
   Serial.println(F("Please enable at least one sensor!"));
 #ifdef HAS_DISPLAY
   oled.setCursor(0,3);
-  oled.print(F("NO SENSORS")); 
+  oled.print(F("NO SENSORS ENABLED")); 
 #endif
   while(1);
 #endif
