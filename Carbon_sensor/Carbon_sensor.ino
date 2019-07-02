@@ -199,11 +199,11 @@ void send_values()
 {
 #ifdef HAS_CO_SENSOR
   send(prefix_message.setSensor(CHILD_ID_CO).set( F("ppm") )); delay(RF_DELAY);
-  send(msgCO.setSensor(CHILD_ID_CO).set(COValue),1)
+  send(msgCO.setSensor(CHILD_ID_CO).set(COValue),1);
 #endif
 #ifdef HAS_CO2_SENSOR
   send(prefix_message.setSensor(CHILD_ID_CO2).set( F("ppm") )); delay(RF_DELAY);
-  send(msgCO2.setSensor(CHILD_ID_CO2).set(CO2Value),1)
+  send(msgCO2.setSensor(CHILD_ID_CO2).set(CO2Value),1);
 #endif
 }
 
@@ -362,7 +362,7 @@ int readCOValue() {
   // Do some checks on the response:
   if (byte(response[0]) != 0xFF){
     Serial.println(F("! Sensor not connected?"));
-    while (sensor.read()!=-1) {};                   // Empty the serial buffer, for a fresh start, just in case.
+    while (co_sensor.read()!=-1) {};                   // Empty the serial buffer, for a fresh start, just in case.
     return -1;
   }
   if (byte(response[1]) != 0x86){
