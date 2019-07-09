@@ -24,9 +24,9 @@
 
 //#define MY_REPEATER_FEATURE                       // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help the signal spread further.
 
-//#define ALLOW_FAKE_DATA                             // Allow fake data to be sent? This is an experimental feature. It's designed to make the sensor less intrusive in some social situations.
+#define ALLOW_FAKE_DATA                             // Allow fake data to be sent? This is an experimental feature. It's designed to make the sensor less intrusive in some social situations.
 
-#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+//#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
 
 /* END OF SETTINGS
@@ -134,10 +134,11 @@ float fakeness_proportion = 0;                      // How these two values rela
 
 // Connection toggle feature
 boolean desired_connecting_to_network = false;
-boolean connecting_to_network = false;
+boolean connecting_to_network = true;
 
 void presentation()
 {
+#ifdef ALLOW_CONNECTING_TO_NETWORK
   // Send the sketch version information to the gateway and Controller
   sendSketchInfo(F("Fine dust sensor"), F("1.1"));
   
@@ -145,7 +146,8 @@ void presentation()
   present(CHILD_ID_DUST_PM10, S_DUST, F("10 micrometers & smaller")); delay(RF_DELAY);
   present(CHILD_ID_DUST_PM25, S_DUST, F("2.5 micrometers")); delay(RF_DELAY);
 
-  send_all_values = true;     
+  send_all_values = true;
+#endif   
 }
 
 
@@ -281,7 +283,7 @@ void loop() {
   if (currentMillis - lastLoopTime > LOOPDURATION) {
     lastLoopTime = currentMillis;
     loopCounter++;
-    //Serial.print("loopcounter:"); Serial.println(loopCounter);
+    Serial.print("loopcounter:"); Serial.println(loopCounter);
     if(loopCounter > MEASUREMENT_INTERVAL){
       Serial.println(); Serial.println(F("__starting__"));  
       loopCounter = 0;
@@ -322,7 +324,7 @@ void loop() {
         break;
         
       case 11:                                             // On the 11th second (after the fan has been spinning for 10 seconds)
-        
+        Serial.println(F("Asking for fresh data again"));
         while (!my_sds.read(&p25, &p10))
         {
           Serial.println(F("Waiting for data"));
