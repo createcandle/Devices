@@ -30,6 +30,7 @@
  *
  */
 
+//#define DEBUG
 //#define MY_DEBUG // MySensors debugging. Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 // Enable and select the attached radio type
@@ -66,6 +67,11 @@
 #define CO_TX_PIN 4                                 // The TX (transmit) pin for the CO sensor. This should be connected to the RX (receive) pin on the sensor module.
 #define CO2_RX_PIN 5                                // The RX (receive) pin for the CO2 sensor. This should be connected to the TX (transmit) pin on the sensor module.
 #define CO2_TX_PIN 6                                // The TX (transmit) pin for the CO2 sensor. This should be connected to the RX (receive) pin on the sensor module.
+#ifdef RF_NANO
+// If you are using an RF-Nano, you have to switch CE and CS pins.
+#define MY_RF24_CS_PIN 9                            // Used by the MySensors library.
+#define MY_RF24_CE_PIN 10                           // Used by the MySensors library.
+#endif
 
 
 
@@ -138,6 +144,8 @@ void presentation()
 #ifdef HAS_CO2_SENSOR
   present(CHILD_ID_CO2, S_AIR_QUALITY, F("Carbon dioxide")); delay(RF_DELAY);
 #endif
+
+  send_all_values = true;
 }
 
 
@@ -209,6 +217,15 @@ void send_values()
 
 
 void loop() {
+
+  if( send_all_values ){
+#ifdef DEBUG
+    Serial.println(F("RESENDING VALUES"));
+#endif
+    send_all_values = 0;
+    send_values();
+  }
+
 
   //
   // MAIN LOOP
