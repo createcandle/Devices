@@ -16,7 +16,7 @@
 
 //#define HAS_CO_SENSOR                             // Have you attached a CO sensor?
 
-//#define HAS_CO2_SENSOR                            // Have you attached a CO2 sensor?
+#define HAS_CO2_SENSOR                            // Have you attached a CO2 sensor?
 
 #define MEASUREMENT_INTERVAL 120                    // How many seconds do you want between each measurement? The minimum is 4 seconds.
 
@@ -200,6 +200,8 @@ void setup() {
 #endif
   while(1);
 #endif
+
+  wdt_enable(WDTO_8S);                              // Starts the watchdog timer. If it is not reset once every few seconds, then the entire device will automatically restart.
 }
 
 
@@ -242,6 +244,8 @@ void loop() {
     if(loopCounter >= MEASUREMENT_INTERVAL){
       loopCounter = 0;
     }
+
+    wdt_reset();                                      // Reset the watchdog timer
 
 #ifdef HAS_DISPLAY
     screen_vertical_position = 3;                   // If there is one sensor attached, then new data should be shown at line 3 of the screen. If there are two, then data is shown on line 3 and line 6.
