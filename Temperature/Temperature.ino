@@ -96,7 +96,7 @@ int err = SimpleDHTErrSuccess;
 const byte RF_DELAY = 150;                          // A few milliseconds delay between sending makes the radio happy.
 
 MyMessage temperature_message(CHILD_ID_TEMPERATURE, V_TEMP); // Sets up the message format that we'll be sending to the MySensors gateway later.
-MyMessage humidity_message(CHILD_ID_HUMIDITY, V_LEVEL); // Sets up the message format that we'll be sending to the MySensors gateway later.
+MyMessage humidity_message(CHILD_ID_HUMIDITY, V_HUM); // Sets up the message format that we'll be sending to the MySensors gateway later.
 
 
 // Other
@@ -220,6 +220,7 @@ void loop() {
         }
         Serial.print(F("Asked sensor for data"));
 
+
       case 2:
       
         // TEMPERATURE
@@ -264,7 +265,7 @@ void loop() {
 
         if( humidity_value != 101 ){ // Avoid sending erroneous values
           Serial.print(F("Sending humidity value: ")); Serial.println(humidity_value); 
-          send(humidity_message.setSensor(CHILD_ID_HUMIDITY).set(humidity_value,1)); // We ask the controller to acknowledge that it has received the data.
+          send(humidity_message.setSensor(CHILD_ID_HUMIDITY).set(humidity_value,1),1); // We ask the controller to acknowledge that it has received the data.
         }
         break;
 
