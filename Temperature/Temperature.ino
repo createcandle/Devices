@@ -2,6 +2,10 @@
  * 
  * This is a temperature and humidity sensor for the Candle project.
  * 
+ * It uses the DHT22 sensor to measure temperature and humidity.
+ * 
+ * These values can be displayed on an OLED screen.
+ * 
  * 
  * SETTINGS */ 
 
