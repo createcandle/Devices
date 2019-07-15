@@ -53,7 +53,7 @@
 // Mysensors advanced settings
 #define MY_TRANSPORT_WAIT_READY_MS 10000            // Try connecting for 10 seconds. Otherwise just continue.
 //#define MY_RF24_CHANNEL 100                       // In EU the default channel 76 overlaps with wifi, so you could try using channel 100. But you will have to set this up on every device, and also on the controller.
-//#define MY_RF24_DATARATE RF24_1MBPS               // Slower datarate makes the network more stable?
+#define MY_RF24_DATARATE RF24_1MBPS               // Slower datarate makes the network more stable?
 //#define MY_NODE_ID 10                             // Giving a node a manual ID can in rare cases fix connection issues.
 //#define MY_PARENT_NODE_ID 0                       // Fixating the ID of the gatewaynode can in rare cases fix connection issues.
 //#define MY_PARENT_NODE_IS_STATIC                  // Used together with setting the parent node ID. Daking the controller ID static can in rare cases fix connection issues.
@@ -139,10 +139,10 @@ void presentation()
   
   // Register all sensors to gateway: 
 #ifdef HAS_CO_SENSOR
-  present(CHILD_ID_CO, S_AIR_QUALITY, F("Carbon monoxide")); delay(RF_DELAY);
+  present(CHILD_ID_CO, S_AIR_QUALITY, F("Carbon monoxide")); wait(RF_DELAY);
 #endif
 #ifdef HAS_CO2_SENSOR
-  present(CHILD_ID_CO2, S_AIR_QUALITY, F("Carbon dioxide")); delay(RF_DELAY);
+  present(CHILD_ID_CO2, S_AIR_QUALITY, F("Carbon dioxide")); wait(RF_DELAY);
 #endif
 
   send_all_values = true;
