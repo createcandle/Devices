@@ -9,9 +9,6 @@
  * 
  * SETTINGS */ 
 
-
-//#define HAS_DHT22_SENSOR                            // Have you attached a temperature sensor?
-
 #define MEASUREMENT_INTERVAL 30                     // How many seconds do you want between each measurement? The minimum is 4 seconds.
 
 #define HAS_DISPLAY                                 // Does the sensor have a little OLED display attached?
@@ -73,8 +70,9 @@
 
 
 // DHT sensor
-//SimpleDHT11 dht22(SENSOR_PIN); // Use this one if you want to use an older DHT11 sensor instead
 SimpleDHT22 dht22(SENSOR_PIN);
+//SimpleDHT11 dht22(SENSOR_PIN); // If you'd like to use the older version of the sensor, use this line instead.
+
 float temperature_value = -100;
 float humidity_value = -100;
 int err = SimpleDHTErrSuccess;
