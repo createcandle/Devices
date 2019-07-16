@@ -76,7 +76,7 @@
 //SimpleDHT11 dht22(SENSOR_PIN); // Use this one if you want to use an older DHT11 sensor instead
 SimpleDHT22 dht22(SENSOR_PIN);
 float temperature_value = -100;
-float humidity_value = 101;
+float humidity_value = -100;
 int err = SimpleDHTErrSuccess;
 
 #ifdef HAS_DISPLAY
@@ -156,8 +156,12 @@ void setup() {
 
 void send_values()
 {
-  send(temperature_message.setSensor(CHILD_ID_TEMPERATURE).set(temperature_value,1),1);
-  send(humidity_message.setSensor(CHILD_ID_HUMIDITY).set(humidity_value,1),1);
+  if( temperature_value != -100){
+    send(temperature_message.setSensor(CHILD_ID_TEMPERATURE).set(temperature_value,1),1);
+  }
+  if( humidity_value != -100){
+    send(humidity_message.setSensor(CHILD_ID_HUMIDITY).set(humidity_value,1),1);
+  }
 }
 
 
