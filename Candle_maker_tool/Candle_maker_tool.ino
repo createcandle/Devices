@@ -24,28 +24,33 @@
 
 // You can enable and disable the settings below by adding or removing double slashes ( // ) in front of a line.
 
-//#define BINARY_SENSOR1_CONNECTED                      // Binary sensor 1. Did you connect an on/off input on pin 2? For example, this could be a button or a motion sensor. As long as it only output "on" and "off", you can connect it.
-//#define BINARY_SENSOR2_CONNECTED                      // Binary sensor 2. Did you connect an on/off input on pin 3? For example, this could be a button or a motion sensor. As long as it only output "on" and "off", you can connect it.
+//#define BINARY_SENSOR1_CONNECTED                  // Binary sensor 1. Did you connect an on/off input on pin 2? For example, this could be a button or a motion sensor. As long as it only output "on" and "off", you can connect it.
+//#define BINARY_SENSOR2_CONNECTED                  // Binary sensor 2. Did you connect an on/off input on pin 3? For example, this could be a button or a motion sensor. As long as it only output "on" and "off", you can connect it.
 
-//#define ANALOG_SENSOR1_CONNECTED                      // Analog sensor 1. Did you connect an analog sensor on A0?
-//#define ANALOG_SENSOR2_CONNECTED                      // Analog sensor 2. Did you connect an analog sensor on A1?
+//#define ANALOG_SENSOR1_CONNECTED                  // Analog sensor 1. Did you connect an analog sensor on A0?
+//#define ANALOG_SENSOR2_CONNECTED                  // Analog sensor 2. Did you connect an analog sensor on A1?
 
-//#define BINARY_ACTUATOR1_CONNECTED                    // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
-//#define BINARY_ACTUATOR1_SELF_LOCKING               // Turn digital output 1 off automatically? If you have connected something on the first digital output, should that part be set back to 'off' after a little while?
+//#define BINARY_ACTUATOR1_CONNECTED                // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
+//#define BINARY_ACTUATOR1_SELF_LOCKING             // Turn digital output 1 off automatically? If you have connected something on the first digital output, should that part be set back to 'off' after a little while?
 
-//#define BINARY_ACTUATOR2_CONNECTED                    // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
-//#define BINARY_ACTUATOR2_SELF_LOCKING               // Turn digital output 2 off automatically? Should digital output 2 turn itself off after a little while?
+//#define BINARY_ACTUATOR2_CONNECTED                // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
+//#define BINARY_ACTUATOR2_SELF_LOCKING             // Turn digital output 2 off automatically? Should digital output 2 turn itself off after a little while?
 
-#define SELF_LOCKING_DELAY 3                          // Turn off delay. If you want a digital output to turn itself off again after a short amount of time, how many seconds should pass before this happens?
+#define SELF_LOCKING_DELAY 3                        // Turn off delay. If you want a digital output to turn itself off again after a short amount of time, how many seconds should pass before this happens?
 
-//#define PWM_ACTUATOR1_CONNECTED                       // Servo 1. Did you connect a servo on pin 7?
-//#define PWM_ACTUATOR2_CONNECTED                       // Servo 2. Did you connect a servo on pin 8?
+//#define PWM_ACTUATOR1_CONNECTED                   // Servo 1. Did you connect a servo on pin 7?
+//#define PWM_ACTUATOR2_CONNECTED                   // Servo 2. Did you connect a servo on pin 8?
 
-//#define HAS_DISPLAY                                 // Did you connect an OLED display? If you connect a display you can send text messages to display on it.
+//#define ANALOG_ACTUATOR1_CONNECTED                // Analog output 1. Did you connect an analog actuator on pin A2? For example an LED.
+//#define ANALOG_ACTUATOR2_CONNECTED                // Analog output 2. Did you connect an analog actuator on pin A3? For example an LED.
 
 
+//#define HAS_DISPLAY                               // Did you connect an OLED display? If you connect a display you can send text messages to display on it.
+//#define TWO_LINES                                 // Adds an extra output for the display, so you can send two strings to it instead of one.
 
-#define RF_NANO                                       // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+#define MY_REPEATER_FEATURE                         // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help the signal spread further.
+
+#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
 
  /* END OF SETTINGS
@@ -62,13 +67,7 @@
 
 
 //#define DEBUG // General debug option, give extra information via the serial output when enabled.
-//#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
-
-#ifdef RF_NANO
-// If you are using an RF-Nano, you have to switch CE and CS pins.
-#define MY_RF24_CS_PIN 9                            // Used by the MySensors library.
-#define MY_RF24_CE_PIN 10                           // Used by the MySensors library.
-#endif
+#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 
 // Enable and select the attached radio type
@@ -80,11 +79,11 @@
 // MySensors: Choose your desired radio power level. High power can cause issues on cheap Chinese NRF24 radio's.
 //#define MY_RF24_PA_LEVEL RF24_PA_MIN
 //#define MY_RF24_PA_LEVEL RF24_PA_LOW
-#define MY_RF24_PA_LEVEL RF24_PA_HIGH
-//#define MY_RF24_PA_LEVEL RF24_PA_MAX
+//#define MY_RF24_PA_LEVEL RF24_PA_HIGH
+#define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors advanced security
-#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
@@ -110,6 +109,8 @@
 #define PWM_ACTUATOR2_PIN 7
 #define ANALOG_SENSOR1_PIN A0
 #define ANALOG_SENSOR2_PIN A1
+#define ANALOG_ACTUATOR1_PIN A2
+#define ANALOG_ACTUATOR2_PIN A3
 // Add rotaty encoder as an option?
 
 #define OLED_DISPLAY_SDA_PIN A4                     // OLED screen data pin
@@ -136,8 +137,6 @@
 
 
 
-
-
 // CHILDREN IDs
 
 #define BINARY_SENSOR1_CHILD_ID 1
@@ -148,8 +147,11 @@
 #define BINARY_ACTUATOR2_CHILD_ID 6
 #define PWM_ACTUATOR1_CHILD_ID 7
 #define PWM_ACTUATOR2_CHILD_ID 8
+#define ANALOG_ACTUATOR1_CHILD_ID 9
+#define ANALOG_ACTUATOR2_CHILD_ID 10
 
 #define TEXT_STRING1_CHILD_ID 25
+#define TEXT_STRING2_CHILD_ID 26
 
 // MySensors messages
 #ifdef BINARY_SENSOR1_CONNECTED
@@ -176,6 +178,12 @@ MyMessage analog_sensor_message(ANALOG_SENSOR1_CHILD_ID, V_CUSTOM);
 MyMessage analog_sensor_message(ANALOG_SENSOR2_CHILD_ID, V_CUSTOM);
 #endif
 
+#ifdef ANALOG_ACTUATOR1_CONNECTED
+MyMessage percentage_message(ANALOG_ACTUATOR1_CHILD_ID, V_PERCENTAGE);
+#elif defined(ANALOG_ACTUATOR2_CONNECTED)
+MyMessage percentage_message(ANALOG_ACTUATOR2_CHILD_ID, V_PERCENTAGE);
+#endif
+
 #ifdef HAS_DISPLAY
 MyMessage text_message(TEXT_STRING1_CHILD_ID, V_TEXT);             // Sets up the message format that we'll be sending to the MySensors gateway later. The first part is the ID of the specific sensor module on this node. The second part tells the gateway what kind of data to expect.
 #endif
@@ -194,6 +202,11 @@ int desired_pwm_actuator1_state = 0;                // Between 0 and 100
 int desired_pwm_actuator2_state = 0;                // Between 0 and 100
 int pwm_actuator1_state = 0;                        // Between 0 and 100
 int pwm_actuator2_state = 0;                        // Between 0 and 100
+
+int desired_analog_actuator1_state = 0;             // Between 0 and 100
+int desired_analog_actuator2_state = 0;             // Between 0 and 100
+int analog_actuator1_state = 0;                     // Between 0 and 100
+int analog_actuator2_state = 0;                     // Between 0 and 100
 
 boolean new_binary_sensor1_state = 0;               // 0 or 1
 boolean new_binary_sensor2_state = 0;               // 0 or 1
@@ -219,15 +232,19 @@ int servo_slow_step = 1024;
 // OLED DISPLAY
 
 #ifdef HAS_DISPLAY
-#define TEXT_STRING_LENGTH 26
-#define OLED_I2C_ADDRESS 0x3C
+#define INCLUDE_SCROLLING 0                         // Text scrolling for the OLED screen is not necessary
+#define TEXT_STRING_LENGTH 26                       // How long the strings are that store the text to display on the screen
+#define OLED_I2C_ADDRESS 0x3C                       // A technical requirement. All I2C OLED screens have an 'address'
 #include <SSD1306Ascii.h>                           // Simple drivers for the screen.
 #include <SSD1306AsciiAvrI2c.h>                     // "SSD1306Ascii"
-SSD1306AsciiAvrI2c oled;
+SSD1306AsciiAvrI2c oled;                            // Creating the display object
 byte screen_vertical_position = 3;                  // Used to always show both CO and CO2 levels at the top of the screen.
 char string1[26] = "HELLO WORLD";                   // Initial text to show on display.
 #endif
 
+#if defined HAS_DISPLAY && defined TWO_LINES
+char string2[26] = "";                              // Initial text line 2 to show on display.
+#endif
 
 
 // Timer
@@ -236,7 +253,7 @@ static unsigned long lastLoopTime = 0;              // Holds the last time the m
 
 
 // Other
-boolean send_all_values = true;
+boolean send_all_values = true;                     // When this is true, all current values will be (re)-sent to the controller.
 
 
 void presentation()
@@ -270,8 +287,19 @@ void presentation()
   present(PWM_ACTUATOR2_CHILD_ID, S_DIMMER, F("Servo control 2")); 
 #endif
 
+#ifdef ANALOG_ACTUATOR1_CONNECTED
+  present(ANALOG_ACTUATOR1_CHILD_ID, S_DIMMER, F("Analog control 1"));
+#endif
+#ifdef ANALOG_ACTUATOR2_CONNECTED
+  present(ANALOG_ACTUATOR2_CHILD_ID, S_DIMMER, F("Analog control 2")); 
+#endif
+
 #ifdef HAS_DISPLAY
   present(TEXT_STRING1_CHILD_ID, S_INFO, F("Display text 1"));
+#endif
+
+#if defined HAS_DISPLAY && defined TWO_LINES
+  present(TEXT_STRING2_CHILD_ID, S_INFO, F("Display text 2"));
 #endif
 
   send_all_values = true;    
@@ -385,8 +413,39 @@ void setup()
   Serial.println(F("I have a servo 2"));
 #endif
 
+
+
+  // Set the initial position of the binary output (relay/LED).
+#ifdef ANALOG_ACTUATOR1_CONNECTED
+  if( loadState(BINARY_ACTUATOR1_CHILD_ID) != 255 ){
+    int original_state = loadState(ANALOG_ACTUATOR1_CHILD_ID);
+    desired_analog_actuator1_state = original_state;
+    analog_actuator1_state = original_state;
+  }
+  pinMode(ANALOG_ACTUATOR1_PIN, OUTPUT);
+  digitalWrite(ANALOG_ACTUATOR1_PIN, percentage_to_servo(analog_actuator1_state,255)); //map(analogRead(ANALOG_SENSOR2_PIN), 0, 100, 0, 255)); //int(analog_actuator1_state * 2.55));
+  Serial.println(F("I have an analog actuator 1"));
+#endif
+
+#ifdef ANALOG_ACTUATOR2_CONNECTED
+  if( loadState(ANALOG_ACTUATOR2_CHILD_ID) != 255 ){
+    int original_state = loadState(ANALOG_ACTUATOR2_CHILD_ID);
+    desired_analog_actuator2_state = original_state;
+    analog_actuator2_state = original_state;
+  }
+  pinMode(ANALOG_ACTUATOR2_PIN, OUTPUT); 
+  digitalWrite(ANALOG_ACTUATOR2_PIN, percentage_to_servo(analog_actuator2_state,255)); //map(analogRead(ANALOG_SENSOR2_PIN), 0, 100, 0, 255)); //int(analog_actuator2_state * 2.55));
+  Serial.println(F("I have an analog actuator 2"));
+#endif
+
+
+
 #ifdef HAS_DISPLAY
   Serial.println(F("I have an OLED screen"));
+#endif
+
+#if defined HAS_DISPLAY && defined TWO_LINES
+  Serial.println(F("My screen has two lines"));
 #endif
 
   // TODO: text string storage and recovery in eeprom.
@@ -429,8 +488,21 @@ void send_values()
   send(percentage_message.setSensor(PWM_ACTUATOR2_CHILD_ID).set(pwm_actuator2_state)); wait(RADIO_DELAY);
 #endif
 
+  // Analog actuator
+#ifdef ANALOG_ACTUATOR1_CONNECTED
+  send(percentage_message.setSensor(ANALOG_ACTUATOR1_CHILD_ID).set(analog_actuator1_state)); wait(RADIO_DELAY);
+#endif
+#ifdef ANALOG_ACTUATOR2_CONNECTED
+  send(percentage_message.setSensor(ANALOG_ACTUATOR2_CHILD_ID).set(analog_actuator2_state)); wait(RADIO_DELAY);
+#endif
+
+
 #ifdef HAS_DISPLAY
   send(text_message.setSensor(TEXT_STRING1_CHILD_ID).set(F("Change me"))); wait(RADIO_DELAY);
+#endif
+
+#if defined HAS_DISPLAY && defined TWO_LINES
+  send(text_message.setSensor(TEXT_STRING2_CHILD_ID).set(F("Change me too"))); wait(RADIO_DELAY);
 #endif
 
 }
@@ -553,7 +625,6 @@ void receive(const MyMessage &message)
 
   
   // Binary actuators
-
 #ifdef BINARY_ACTUATOR1_CONNECTED
   if (message.type == V_STATUS && message.sensor == BINARY_ACTUATOR1_CHILD_ID ){
     desired_binary_actuator1_state = message.getBool(); //?RELAY_ON:RELAY_OFF;
@@ -563,7 +634,6 @@ void receive(const MyMessage &message)
     Serial.print(F("-New desired actuator 1 state: ")); Serial.println(desired_binary_actuator1_state);
   }
 #endif
-
 #ifdef BINARY_ACTUATOR2_CONNECTED
   if (message.type == V_STATUS && message.sensor == BINARY_ACTUATOR2_CHILD_ID ){
     desired_binary_actuator2_state = message.getBool(); //?RELAY_ON:RELAY_OFF;
@@ -595,14 +665,45 @@ void receive(const MyMessage &message)
   }
 #endif
 
+
+  // analog actuators
+#ifdef ANALOG_ACTUATOR1_CONNECTED
+  if (message.type == V_DIMMER && message.sensor == ANALOG_ACTUATOR1_CHILD_ID ){
+    desired_analog_actuator1_state = atoi( message.data );
+    desired_analog_actuator1_state = desired_analog_actuator1_state > 100 ? 100 : desired_analog_actuator1_state; // Clip incoming level to valid range of 0 to 100
+    desired_analog_actuator1_state = desired_analog_actuator1_state < 0   ? 0   : desired_analog_actuator1_state;
+    saveState(ANALOG_ACTUATOR1_CHILD_ID, desired_analog_actuator1_state);
+    Serial.print(F("-New desired analog output 1 state: ")); Serial.println(desired_analog_actuator1_state);
+  }
+#endif
+#ifdef ANALOG_ACTUATOR2_CONNECTED
+  if (message.type == V_DIMMER && message.sensor == PWM_ACTUATOR2_CHILD_ID ){
+    desired_analog_actuator2_state = atoi( message.data );
+    desired_analog_actuator2_state = desired_analog_actuator2_state > 100 ? 100 : desired_analog_actuator2_state; // Clip incoming level to valid range of 0 to 100
+    desired_analog_actuator2_state = desired_analog_actuator2_state < 0   ? 0   : desired_analog_actuator2_state;
+    saveState(ANALOG_ACTUATOR2_CHILD_ID, desired_analog_actuator2_state);
+    Serial.print(F("-New desired analog output 2 state: ")); Serial.println(desired_analog_actuator2_state);
+  }
+#endif
+
+
+  // Text output to display
 #ifdef HAS_DISPLAY
-  // Text output
   if (message.type == V_TEXT && message.sensor == TEXT_STRING1_CHILD_ID ){
     memset(string1, 0, sizeof(string1));            // Clear the array that holds the string
     strcpy(string1, message.getString());
     Serial.print(F("-New string 1: ")); Serial.println(string1);
     oled.setCursor(0,0);
     oled.print(string1);
+  }
+#endif
+#if defined HAS_DISPLAY && defined TWO_LINES
+  if (message.type == V_TEXT && message.sensor == TEXT_STRING2_CHILD_ID ){
+    memset(string2, 0, sizeof(string2));            // Clear the array that holds the string
+    strcpy(string2, message.getString());
+    Serial.print(F("-New string 2: ")); Serial.println(string2);
+    oled.setCursor(0,2);
+    oled.print(string2);
   }
 #endif
 }
