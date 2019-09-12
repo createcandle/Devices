@@ -7,8 +7,9 @@
  * - Two analog inputs. For example: rotating dials or sensors that have an analog output.
  * 
  * Output:
- * - Two servos
+ * - Two servos.
  * - Two on/off parts, such as a relay or an LED.
+ * - Two analog outputs.
  * - An OLED display. Use it to display any value you like.
  * 
  * The fun starts when you incorporate these parts with your home automations. For example:
