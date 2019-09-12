@@ -46,7 +46,7 @@
 
 
 //#define HAS_DISPLAY                               // Did you connect an OLED display? If you connect a display you can send text messages to display on it.
-//#define TWO_LINES                                 // Adds an extra output for the display, so you can send two strings to it instead of one.
+//#define TWO_LINES                                 // Two lines on display. Adds an extra output for the display, so you can send two strings to it instead of one.
 
 #define MY_REPEATER_FEATURE                         // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help the signal spread further.
 
