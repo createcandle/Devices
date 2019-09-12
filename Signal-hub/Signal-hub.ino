@@ -28,10 +28,9 @@
  * 
  * SETTINGS */
 
-
 #define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommended.  
 
-#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // If you are using the Candle Manager, the password will be changed to what you chose in the interface automatically. Be aware, the length of the password has an effect on memory use.
+#define VERTICALLY_FLIP_TOUCH_SCREEN                // Vertical flip. Select this if you would like to vertically flip the touch screen.  
 
 #define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
@@ -75,10 +74,7 @@
   *  
   *  TODO
   *  - Check if signal is already stored before storing it. Then again, there can be good reasons to store a signal twice. Perhaps only check for doubles with recognise-only signals?
-  *  - Another bit could be used to store if an on/off signal should also be recognisable. That way the remote could be used twice somehow.. Or: 
-  *  - Request current status of on/off toggles from the controller. Though it might be jarring or even dangerous if all devices suddenly toggled to their new positions.
-  *  - Turn off the display after a while.
-  *  - Send new children as they are created.
+  *  - Another bit could be used to store if an on/off signal should also be recognisable. That way the remote could be used twice somehow. 
   *  - Allow multiple quick succession touch screen events to add play commands to the playlist.
   */
 
@@ -91,8 +87,8 @@
 #define RECEIVER 3                                  // The pin where the receiver is connected.
 #define TRANSMITTER 4                               // The pin where the transmitter is connected.
 
-#define TOUCH_SCREEN_RX_PIN 7                       // The receive (RX) pin for the touchscreen. This connects to the transmit (TX) pin of the touchscreen.
-#define TOUCH_SCREEN_TX_PIN 8                       // The receive (TX) pin for the touchscreen. This connects to the transmit (RX) pin of the touchscreen.
+#define TOUCH_SCREEN_RX_PIN 5                       // The receive (RX) pin for the touchscreen. This connects to the transmit (TX) pin of the touchscreen.
+#define TOUCH_SCREEN_TX_PIN 6                       // The receive (TX) pin for the touchscreen. This connects to the transmit (RX) pin of the touchscreen.
 
 #ifdef RF_NANO
 // If you are using an RF-Nano, you have to switch CE and CS pins.
@@ -114,10 +110,11 @@
 // MySensors: Choose your desired radio power level. High power can cause issues on cheap Chinese NRF24 radio's.
 //#define MY_RF24_PA_LEVEL RF24_PA_MIN
 //#define MY_RF24_PA_LEVEL RF24_PA_LOW
-#define MY_RF24_PA_LEVEL RF24_PA_HIGH
-//#define MY_RF24_PA_LEVEL RF24_PA_MAX
+//#define MY_RF24_PA_LEVEL RF24_PA_HIGH
+#define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors advanced security
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // If you are using the Candle Manager, the password will be changed to what you chose in the interface automatically. Be aware, the length of the password has an effect on memory use.
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
@@ -179,7 +176,12 @@ PROGMEM const byte w[] =                {0x07, 0x11, 'w', 0x00, ' ', 0x00, 0x00,
 PROGMEM const byte menu[] =             {0x07, 0x11, 'M', 'E', 'N', 'U', ' ', 0xEF,}; // Places the word 'menu ' on the screen.
 PROGMEM const byte more[] =             {0x07, 0x11, 'M', 'O', 'R', 'E', '>', 0xEF,}; // Places the word 'menu ' on the screen.
 
-PROGMEM const byte set_vertical[] =     {0x03, 0x04, 0x02, 0xEF,}; // To set rotation of the screen to vertical. Try 0x01 or 0x03 instead of the 0x02.
+#ifdef VERTICALLY_FLIP_TOUCH_SCREEN
+PROGMEM const byte set_vertical[] =     {0x03, 0x04, 0x00, 0xEF,}; // To set rotation of the screen to vertical. Instead of the 0x02 you can try 0x00 (vertical B), 0x01 (horizontal A) or 0x03 (horizontal B).
+#else
+PROGMEM const byte set_vertical[] =     {0x03, 0x04, 0x02, 0xEF,}; // To set rotation of the screen to vertical. Instead of the 0x02 you can try 0x00 (vertical B), 0x01 (horizontal A) or 0x03 (horizontal B).
+#endif
+
 PROGMEM const byte fill_black[] =       {0x04, 0x20, 0x00, 0x00, 0xEF,}; // Fill screen with one color
 PROGMEM const byte fill_blue[] =        {0x04, 0x20, 0x00, 0xFF, 0xEF,}; // Fill screen with one color
 
@@ -187,17 +189,19 @@ PROGMEM const byte text_color_white[] = {0x04, 0x02, 0xFF, 0xFF, 0xEF,}; // whit
 //PROGMEM const byte text_color_black[] = {0x04, 0x02, 0x00, 0x00, 0xEF,}; // Dark text color. fill screen with one color
 //PROGMEM const byte text_color_red[] =   {0x04, 0x02, 0xF8, 0x00, 0xEF,}; // .. text color. fill screen with one color
 
-PROGMEM const byte resetTFT[] =         {0x02, 0x05, 0xEF,}; // Resets the TFT. But has no real effect.
-PROGMEM const byte testTFT[] =          {0x02, 0x00, 0xEF}; // Test the TFT, should respond with "OK".
-PROGMEM const byte backlight_on[] =     {0x03, 0x06, 0xFF, 0xEF}; // Backlight intensity to half-full
-PROGMEM const byte backlight_off[] =    {0x03, 0x06, 0x00, 0xEF}; // Backlight intensity to zero
+//PROGMEM const byte resetTFT[] =         {0x02, 0x05, 0xEF,}; // Resets the TFT. But has no real effect.
+#ifdef DEBUG_SCREEN
+PROGMEM const byte testTFT[] =          {0x02, 0x00, 0xEF,}; // Test the TFT, should respond with "OK".
+#endif
+PROGMEM const byte backlight_on[] =     {0x03, 0x06, 0xFF, 0xEF,}; // Backlight intensity to half-full
+PROGMEM const byte backlight_off[] =    {0x03, 0x06, 0x00, 0xEF,}; // Backlight intensity to zero
 //PROGMEM const byte serialSpeedUp[] =    {0x03, 0x40, 0x03, 0xEF,}; // Sets communication speed to 57600 (from 9600)
-PROGMEM const byte serialSlowDown[] =   {0x03, 0x40, 0x00, 0xEF,}; // Sets communication speed to 9600 again. Oddly enough, it seems it works fastest at this speed..
+//PROGMEM const byte serialSlowDown[] =   {0x03, 0x40, 0x00, 0xEF,}; // Sets communication speed to 9600 again. Oddly enough, it seems it works fastest at this speed..
 
 PROGMEM const byte test[] =   {0x02, 0x00, 0xEF,}; // Test message
 
-
 #endif
+
 
 PROGMEM const char detectedMessage[] = { "Detected  " }; // This construction saves some memory.
 PROGMEM const char replayMessage[]   = { "Replay    " }; // This construction saves some memory.
@@ -291,7 +295,7 @@ byte brightnessTimer = 0;                           // When this reaches 0 the s
 byte playlist[PLAYLIST_SIZE];                       // Sometimes multiple demands to play a signal come in. This holds all the signals we should replay one after the other
 byte playlist_position = 0;                         // Signals that should be replayed are placed in a playlist, so they can be played one after the other of multiple should be played.
 
-byte response_position = 0; // EXPERIMENT TO DEAL WITH SERIAL BETTER
+byte response_position = 0;                         // Used in dealing with incoming serial messages from the touch screen.
 
 
 // DESCRIPTION BIT STATES
@@ -409,7 +413,7 @@ const MessageDef MessageTable[] PROGMEM = {
 #define COPYING_SIMPLE_BTN_ID 5                     // Learn to replay a single signal.
 #define COPYING_ON_OFF_BTN_ID 6                     // Learn to replay an ON and an OFF signal that belong together.
 
-MyMessage textmsg(DEVICE_STATUS_ID, V_TEXT);    // Sets up the message format that we'll be sending to the MySensors gateway later. In this case it's a text variable. The first part is the ID of the specific sensor module on this node. The second part tells the gateway what kind of data to expect.
+MyMessage textmsg(DEVICE_STATUS_ID, V_TEXT);        // Sets up the message format that we'll be sending to the MySensors gateway later. In this case it's a text variable. The first part is the ID of the specific sensor module on this node. The second part tells the gateway what kind of data to expect.
 MyMessage buttonmsg(LEARN_SIMPLE_BTN_ID, V_STATUS); // The message for replayable signals' buttons. This is an on/off message.
 MyMessage detectmsg(10, V_TRIPPED);                 // The message for detect-only signals. This is an on/off message.
 
@@ -488,10 +492,10 @@ void send_values(){
 #ifdef DEBUG
       Serial.println(F("LoadState had big value, setting to 0."));
 #endif
-      saveState(replayableID - 9, 0); // The -9 is to offset the ID back the the savestates in the eeprom. So child 10 has savestate 1, etc.
+      saveState(replayableID - 9, 0);               // The -9 is to offset the ID back the the savestates in the eeprom. So child 10 has savestate 1, etc.
     }
     boolean saved_toggle_state = loadState(replayableID - 9);
-    send(buttonmsg.setSensor(replayableID).set( saved_toggle_state)); wait(RADIO_DELAY); // Tell the controller in what state the child is. //?0:1
+    send(buttonmsg.setSensor(replayableID).set( saved_toggle_state)); wait(RADIO_DELAY); // Tell the controller in what state the child is.
   }
 
   wait(RADIO_DELAY);
@@ -535,18 +539,18 @@ void setup()
 
 #ifdef DEBUG_SCREEN
   Serial.println(F("BC: test"));
-  basicCommand(test);
+  basicCommand(testTFT);
 #endif
 
 #ifdef DEBUG_SCREEN
-  Serial.println(F("BC: serial_slow"));
+  //Serial.println(F("BC: serial_slow"));
 #endif
   //basicCommand(serialSlowDown);  
   
 #ifdef DEBUG_SCREEN
- Serial.println(F("BC: reset"));
+ //Serial.println(F("BC: reset"));
 #endif
-  //basicCommand(resetTFT);                           // Reset the TFT.
+  //basicCommand(resetTFT);                         // Reset the TFT.
 
 #ifdef DEBUG_SCREEN
   Serial.println(F("BC: backlight_on"));
@@ -854,7 +858,7 @@ void loop()
         else if( buttonPressed <= howManyReplayButtonsWillFitOnScreen ){  // A send-signal button is being pressed, and we're not inside the menu, so we should replay a signal.
           if( buttonPressed <= amountOfStoredReplayableSignals - (visibleReplayButtonsPage * howManyReplayButtonsWillFitOnScreen) ){
             //boolean onOrOff = 0;
-            //if( touchX > TOUCHSCREEN_WIDTH / 2 ){   // If the user pressed the right side of the virtual button.
+            //if( touchX > TOUCHSCREEN_WIDTH / 2 ){ // If the user pressed the right side of the virtual button.
             //  onOrOff = 1;
             //}
             //replay( buttonPressed + (visibleReplayButtonsPage * howManyReplayButtonsWillFitOnScreen), onOrOff ); // The replay function manages the required state change internally.
@@ -1306,28 +1310,28 @@ boolean findPattern()
 #endif  
   byte maxPatternLength = (byte)constrain((endPosition-startPosition)/2, 31, 255); // what length is the pattern we're looking for allowed to be? It's most likely 8 bytes = 64 bits = 128 timings, but we can't be sure in this case. To find a repeating pattern, we need to be able to have it in the data twice, so the maximum length is the timings array length divided by two.
   byte searchLength = 32;                         
-  while( searchLength + 4 <= maxPatternLength ){  // Check the maximum pattern length we can search for in the current memory.
+  while( searchLength + 4 <= maxPatternLength ){    // Check the maximum pattern length we can search for in the current memory.
     searchLength = searchLength + 4;
   }
   //Serial.print(F(" searchLength that we begin pattern matching with: ")); Serial.println(searchLength);
   for( searchLength; searchLength > MINIMAL_SIGNAL_LENGTH; searchLength = searchLength - 4 ){ // Find repeating patterns of a minimal length, starting with a long as possible signal, and then working down.
-    int patternFirstPosition = 0;                 // Where we found an often occuring pattern for the first time. To keep things simple(low memory) we only search the first 255 positions of the array.
+    int patternFirstPosition = 0;                   // Where we found an often occuring pattern for the first time. To keep things simple(low memory) we only search the first 255 positions of the array.
     for ( int i = startPosition; i <= endPosition-searchLength; i++ ){
       byte patternCount = 0;
       for ( int y = startPosition; y <= endPosition-searchLength; y++ ) {
-        boolean oksofar = true;                   // Starts out assuming the pattern is found, and then starts comparing. As soon as one of the timings is not the same, it sets this to false.
-        for (byte r = 0; r < searchLength; r++) { // We compare the selected patterns
+        boolean oksofar = true;                     // Starts out assuming the pattern is found, and then starts comparing. As soon as one of the timings is not the same, it sets this to false.
+        for (byte r = 0; r < searchLength; r++) {   // We compare the selected patterns
           if( timings[i+r] != timings[y+r] ){
-            oksofar = false;                      // If the pattern is not found at this position.
-            break;                                // No need continuing the comparison.
+            oksofar = false;                        // If the pattern is not found at this position.
+            break;                                  // No need continuing the comparison.
           }
         }
         if( oksofar == true ){
-          patternCount++;                         // We scanned over the position in the array, and nothing tripped up the recogniser, meaning it actuallly found the pattern.
-          y = y + (searchLength-1);               // Minus one, because the for-loop will also add one. We skip ahead and see if we can find the same pattern again straigth after.
+          patternCount++;                           // We scanned over the position in the array, and nothing tripped up the recogniser, meaning it actuallly found the pattern.
+          y = y + (searchLength-1);                 // Minus one, because the for-loop will also add one. We skip ahead and see if we can find the same pattern again straigth after.
         }
       }
-      if(patternCount > 1){                       // We found a repeating pattern!
+      if(patternCount > 1){                         // We found a repeating pattern!
         // Quick quality check. It makes sure the found code isn't just the same number in a row a lot.
         int sameNumber = 0;
         for( int j = startPosition; j <= endPosition; j++ ){
@@ -1335,7 +1339,7 @@ boolean findPattern()
             sameNumber++;
           }
         }
-        if(sameNumber > 15){                      // This many of the same timings in a row is a bad sign.
+        if(sameNumber > 15){                        // This many of the same timings in a row is a bad sign.
           return false;
         }
         Serial.print(F("Pattern: "));
@@ -1344,9 +1348,9 @@ boolean findPattern()
         }
         Serial.println();
         // Update the global variables:
-        repeatingPatternLength = searchLength;    // Store the length of the repeating part.
-        startPosition = i;                        // Set the start position of the repeating part of the signal.
-        endPosition = i + searchLength;           // Set the end position of the repeating oart of the signal.
+        repeatingPatternLength = searchLength;      // Store the length of the repeating part.
+        startPosition = i;                          // Set the start position of the repeating part of the signal.
+        endPosition = i + searchLength;             // Set the end position of the repeating oart of the signal.
         return true;
       }
     }
@@ -1480,7 +1484,7 @@ byte scanEeprom()
       positionOfLastSignalEnd = positionOfLastSignalEnd + storedSignalLength;
       if( state == LISTENING && whatWeCameHereFor == 0 && bitRead(descriptionData, DESCRIPTION_REPLAYABLE) == 0 ){ // We only check detect-only signals for now. This could be changed to include all signals by removing the last check in this if statement.
         // We should scan the stored binary data against the last signal we received.
-        boolean areTheyTheSame = true;            // The code below continously tries to disprove that they are the same, and skips ahead at the first evidence that this is the case.
+        boolean areTheyTheSame = true;              // The code below continously tries to disprove that they are the same, and skips ahead at the first evidence that this is the case.
         for( byte i = 0; i < 1 + bitRead(descriptionData, DESCRIPTION_ON_OFF); i++ ){ // Check both the on and off signals.
           areTheyTheSame = true;
           for( byte j = 0; j < repeatingSignalByteLength; j++ ){
@@ -1489,7 +1493,7 @@ byte scanEeprom()
               break;
             }
           }
-          if( areTheyTheSame == true ){           // We've compared the entire signal, and.. they are the same!
+          if( areTheyTheSame == true ){             // We've compared the entire signal, and.. they are the same!
             Serial.println(F("Match"));
             Serial.print(F("SEND: Toggle ")); Serial.print(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)); Serial.print(F(" to ")); Serial.println(i);
             
@@ -1498,7 +1502,7 @@ byte scanEeprom()
               connectedToNetwork = send(detectmsg.setSensor(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(!i),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
 
             }
-            else{                                 // This is a simple single trigger-type detection.
+            else{                                   // This is a simple single trigger-type detection.
               //Serial.println(F("-simple single trigger, will go back to off by itself."));
               connectedToNetwork = send(detectmsg.setSensor(99 + (amountOfStoredSignals - amountOfStoredReplayableSignalsScan)).set(1),1); wait(RADIO_DELAY); // This sends the found value to the server. If the signal is an on-off version, it sends the correct value (which needs to be inversed, hence the !i). It also asks for a receipt (the 1 at the end), so that it acts as a network status detection at the same time.
               wait(2000);
@@ -1507,11 +1511,11 @@ byte scanEeprom()
             updateDisplay(MATCH);
             whatWeCameHereFor = amountOfStoredSignals; // Sending back the index of this signal. 
             
-            break;                                // Just in case that this is a double signal, then we don't want a second loop to overrule this result.
+            break;                                  // Just in case that this is a double signal, then we don't want a second loop to overrule this result.
           }
         }
       } // end of detectable
-    } // end of 'is a signal'                     // end of checking a stored signal.
+    } // end of 'is a signal'                       // end of checking a stored signal.
   }                                                 // end of while loop, so the entire EEPROM has now been scanned.
   amountOfStoredReplayableSignals = amountOfStoredReplayableSignalsScan;
   return whatWeCameHereFor;
@@ -1587,7 +1591,7 @@ boolean writeSignalToEeprom()
     }
     // ARE WE STORING AN ON/OFF SIGNAL?
     if( state == COPYING_ON || state == LEARNING_ON ){
-      bitWrite(signalDescriber, DESCRIPTION_ON_OFF , 1);   // We use this position to remember if this is an ON/OFF signal.
+      bitWrite(signalDescriber, DESCRIPTION_ON_OFF , 1); // We use this position to remember if this is an ON/OFF signal.
       spaceNeeded = spaceNeeded + (repeatingSignalByteLength * 2); // If this is an on-off signal, then we will need to store the repeating part twice.
     } else {
       spaceNeeded = spaceNeeded + repeatingSignalByteLength;
@@ -1694,7 +1698,7 @@ void replay(byte signalNumber, boolean onOrOff)
   //Serial.print(F("storedSignalLength received from scanEeprom function: ")); Serial.println(storedSignalLength);
   if( storedSignalLength && amountOfStoredReplayableSignals > 0 ){
 
-    saveState(signalNumber, onOrOff);             // We save the new current toggle state in the eeprom too.
+    saveState(signalNumber, onOrOff);               // We save the new current toggle state in the eeprom too.
     send(buttonmsg.setSensor(signalNumber + 9).set(onOrOff)); wait(RADIO_DELAY); // Tell the controller in what state the child is.
     send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Playing..") ));
     updateDisplay(REPLAYING);
@@ -1977,17 +1981,17 @@ void updateDisplay(byte currentStatus)              // Show info on the display
     }
     else if( currentStatus == OUT_OF_SPACE ){
       writeText(START_OF_MENU_DELETE_ALL + OUT_OF_SPACE);
-      wait(4000);
+      wait(3000);
     }
   
     // Other
     else if( currentStatus == DELETE_LAST ){
       writeText(START_OF_MENU_DELETE_ALL + DELETED_LAST);
-      wait(4000);
+      wait(3000);
     }  
     else if( currentStatus == DELETED_ALL ){
       writeText(START_OF_MENU_DELETE_ALL + DELETED_ALL);
-      wait(4000);
+      wait(3000);
     }
   }
 
@@ -2016,7 +2020,7 @@ void updateDisplay(byte currentStatus)              // Show info on the display
     oled.print(F("Found"));
     oled.setCursor(0,5);
     oled.print(F("match!"));
-    wait(2000);
+    wait(1500);
   }
   else if( currentStatus == REPLAYING ){
     oled.print(F("Playing ")); oled.print(buttonPressed); 
@@ -2053,7 +2057,7 @@ void updateDisplay(byte currentStatus)              // Show info on the display
       oled.setCursor(0,7);
       oled.print(F("Stored signals: ")); oled.print(amountOfStoredSignals);
     }
-    wait(3000);
+    wait(2000);
   }
 
   // Errors
@@ -2065,7 +2069,7 @@ void updateDisplay(byte currentStatus)              // Show info on the display
   }
   else if( currentStatus == OUT_OF_SPACE ){
     oled.print(F("Out of space!"));
-    wait(4000);
+    wait(3000);
   }
   else if( currentStatus == NO_SIGNAL_STORED_YET ){
     oled.print(F("Empty"));  
@@ -2080,7 +2084,7 @@ void updateDisplay(byte currentStatus)              // Show info on the display
     oled.print(F("You can only replay"));
     oled.setCursor(0,6);
     oled.print(F("it via the app."));
-    wait(4000);
+    wait(3000);
   }
 
   // Other
@@ -2088,13 +2092,13 @@ void updateDisplay(byte currentStatus)              // Show info on the display
     oled.print(F("DELETED"));
     oled.setCursor(0,5);
     oled.print(F("ONE SIGNAL"));
-    wait(4000);
+    wait(3000);
   }  
   else if( currentStatus == DELETED_ALL ){
     oled.print(F("MEMORY"));
     oled.setCursor(0,5);
     oled.print(F("CLEAR"));
-    wait(4000);
+    wait(3000);
   }
 #ifdef DEBUG
   else{
@@ -2499,26 +2503,19 @@ void writeText(byte textID)
 #ifdef DEBUG_SCREEN
   Serial.println(F("WRITETEXT"));
 #endif
-  byte j = 0;
-  byte c = 0;
-  byte stringLength = strlen_P(MessageTable[textID].Description);
-  
-  while ( j < stringLength ){
-    byte command[9] = {0x7E, 0x07, 0x11, 0x00, 0x00, 0x20, 0x00, 0x00, 0xEF,}; // It took quite some testing to get this right. Just using 0x00 for the entire payload will not work.
-    
-    for( byte i=0; i < 5; i++ ){
-      if(j+i < stringLength){
-        command[3+i] = pgm_read_byte(MessageTable[textID].Description + j + i); // It works in batches of 5 characters..
-      }
-    }
-    for( int i=0; i < sizeof(command); i++ ){
-      touch_screen_serial.write( command[i] );
-      //Serial.print(command[i],HEX); Serial.print(F(" "));
-    }
-    waitForResponse();
-    //wait(20);
-    j = j + 5;
+  byte string_length = strlen_P(MessageTable[textID].Description);
+
+  touch_screen_serial.write( 0x7E );
+  touch_screen_serial.write( string_length + 2);
+  touch_screen_serial.write( 0x11 );
+  for( byte i=0; i < string_length; i++ ){
+    char char_byte = pgm_read_byte(MessageTable[textID].Description + i);
+    //Serial.print("-"); Serial.print(char_byte);
+    touch_screen_serial.write( char_byte );
   }
+  touch_screen_serial.write( 0xEF );
+  
+  waitForResponse();
 }
 
 #ifdef DEBUG_SCREEN
@@ -2570,12 +2567,12 @@ void displayNumber(signed int number)
 }
 
 
-// This function reads the serial data (if available) from the screen. The implemented commands it can detect are 'ok', and the touch coordinates.
+// This function reads the serial data (if available) from the screen.
 void readResponse()
 {
   volatile int availableSerialCount = touch_screen_serial.available();
   //Serial.println(F("READRESPONSE"));
-  if( availableSerialCount == 0 ){ 
+  if( availableSerialCount < 5 ){ 
     return;
   }
 
@@ -2597,12 +2594,6 @@ void readResponse()
     return;
   }
   
-  if( availableSerialCount < 5 ){                   // Any response should be at least 5 bytes.
-#ifdef DEBUG_SCREEN
-    Serial.print(F("Too short response from screen (")); Serial.println( touch_screen_serial.available() );
-#endif
-    return;
-  }
 #ifdef DEBUG_SCREEN
   Serial.println(F("GOT RESPONSE"));
 #endif
@@ -2637,10 +2628,10 @@ void readResponse()
 #ifdef DEBUG_SCREEN
           Serial.println(F("Turning on backlight"));
 #endif
-            basicCommand(backlight_on);                // If the screen was touched but the backlight was off, turn the backlight on.
+            basicCommand(backlight_on);             // If the screen was touched but the backlight was off, turn the backlight on.
           }
           else{
-            touched = true;                           // To indicate that a touch event has just occured.
+            touched = true;                         // To indicate that a touch event has just occured.
           }
           brightnessTimer = 255;
           clearReceivedBuffer();
@@ -2673,11 +2664,11 @@ void basicCommand(const char* cmd)
 #ifdef DEBUG_SCREEN
   Serial.println(F("BASIC COMMAND"));
 #endif
-  if( touch_screen_serial.available() ){                       // If necessary, clear old messages from the serial buffer.
+  if( touch_screen_serial.available() ){            // If necessary, clear old messages from the serial buffer.
     clearReceivedBuffer();
   } 
 
-  touch_screen_serial.write(0x7E);                             // Starting byte, is always the same.
+  touch_screen_serial.write(0x7E);                  // Starting byte, is always the same.
   byte b = 0;
   while( b < MAX_BASIC_COMMAND_LENGTH ){            // How many bytes are the basic commands at most?
     touch_screen_serial.write( pgm_read_byte(&cmd[b]) );
@@ -2711,7 +2702,7 @@ void waitForResponse() // From the touch screen
 #endif  
   if( touch_screen_serial.available() > 0 ){
     wait(10); // Perhaps some more bytes will show up.
-    while( touch_screen_serial.available() > 0 ){                // Throwing away the response. All we care about is touch messages, and they are handled in the readResponse function.
+    while( touch_screen_serial.available() > 0 ){   // Throwing away the response. All we care about is touch messages, and they are handled in the readResponse function.
       byte x = touch_screen_serial.read();
       //Serial.print(x); Serial.print(F("-"));
     }
@@ -2777,7 +2768,7 @@ void receive(const MyMessage &message)
 
 #if !(defined(HAS_TOUCH_SCREEN))
     if( message.sensor < 10 && message.getBool() ){
-      if( message.sensor == LEARN_SIMPLE_BTN_ID ){ // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
+      if( message.sensor == LEARN_SIMPLE_BTN_ID ){  // The user wants to the system to learn a new simple signal. This only starts when the button is toggled to on.
         send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Play the signal") )); //wait(RADIO_DELAY);
         state = LEARNING_SIMPLE;
       }
@@ -2799,7 +2790,7 @@ void receive(const MyMessage &message)
 #endif
 
     if( message.sensor >= 10  && message.sensor < 100 ){ // If the user toggled a signal replay button.
-      if( playlist_position < PLAYLIST_SIZE){ // We only add to the playlist if there is space left in the playlist.
+      if( playlist_position < PLAYLIST_SIZE){       // We only add to the playlist if there is space left in the playlist.
         
         Serial.println(F("-Adding to playlist"));
         playlist_position++;
