@@ -41,8 +41,8 @@
 //#define PWM_ACTUATOR1_CONNECTED                   // Servo 1. Did you connect a servo on pin 7?
 //#define PWM_ACTUATOR2_CONNECTED                   // Servo 2. Did you connect a servo on pin 8?
 
-//#define ANALOG_ACTUATOR1_CONNECTED                // Analog output 1. Did you connect an analog actuator on pin A2? For example an LED.
-//#define ANALOG_ACTUATOR2_CONNECTED                // Analog output 2. Did you connect an analog actuator on pin A3? For example an LED.
+//#define ANALOG_ACTUATOR1_CONNECTED                // Analog output 1. Did you connect an analog actuator on pin A2?
+//#define ANALOG_ACTUATOR2_CONNECTED                // Analog output 2. Did you connect an analog actuator on pin A3?
 
 
 //#define HAS_DISPLAY                               // Did you connect an OLED display? If you connect a display you can send text messages to display on it.
