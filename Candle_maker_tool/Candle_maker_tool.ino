@@ -57,9 +57,8 @@
  *
  *
  *  TODO / IDEAS
- *  - Analog output!
  *  - Store and load strings using eeprom.
- *  - Add 1 Basic PWM output?
+ *  - Add 1 Basic digital PWM output?
  *  - Add stepper motor?
  *  - Add rotational encoder?
  *
@@ -111,8 +110,6 @@
 #define ANALOG_SENSOR2_PIN A1
 #define ANALOG_ACTUATOR1_PIN A2
 #define ANALOG_ACTUATOR2_PIN A3
-// Add rotaty encoder as an option?
-
 #define OLED_DISPLAY_SDA_PIN A4                     // OLED screen data pin
 #define OLED_DISPLAY_SCL_PIN A5                     // OLED screen clock pin
 
