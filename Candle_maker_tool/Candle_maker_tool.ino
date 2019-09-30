@@ -703,6 +703,7 @@ void receive(const MyMessage &message)
     Serial.print(F("-New string 1: ")); Serial.println(string1);
     oled.setCursor(0,0);
     oled.print(string1);
+    oled.clearToEOL();
   }
 #endif
 #if defined HAS_DISPLAY && defined TWO_LINES
@@ -712,6 +713,7 @@ void receive(const MyMessage &message)
     Serial.print(F("-New string 2: ")); Serial.println(string2);
     oled.setCursor(0,2);
     oled.print(string2);
+    oled.clearToEOL();
   }
 #endif
 }
