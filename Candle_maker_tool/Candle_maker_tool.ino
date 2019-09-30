@@ -39,8 +39,8 @@
 
 #define SELF_LOCKING_DELAY 3                        // Turn off delay. If you want a digital output to turn itself off again after a short amount of time, how many seconds should pass before this happens?
 
-//#define PWM_ACTUATOR1_CONNECTED                   // Servo 1. Did you connect a servo on pin 7?
-//#define PWM_ACTUATOR2_CONNECTED                   // Servo 2. Did you connect a servo on pin 8?
+//#define PWM_ACTUATOR1_CONNECTED                   // Servo 1. Did you connect a servo on pin 6?
+//#define PWM_ACTUATOR2_CONNECTED                   // Servo 2. Did you connect a servo on pin 7?
 
 //#define ANALOG_ACTUATOR1_CONNECTED                // Analog output 1. Did you connect an analog actuator on pin A2?
 //#define ANALOG_ACTUATOR2_CONNECTED                // Analog output 2. Did you connect an analog actuator on pin A3?
@@ -67,7 +67,7 @@
 
 
 //#define DEBUG // General debug option, give extra information via the serial output when enabled.
-#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
+//#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 
 // Enable and select the attached radio type
@@ -111,8 +111,6 @@
 #define ANALOG_SENSOR2_PIN A1
 #define ANALOG_ACTUATOR1_PIN A2
 #define ANALOG_ACTUATOR2_PIN A3
-#define OLED_DISPLAY_SDA_PIN A4                     // OLED screen data pin
-#define OLED_DISPLAY_SCL_PIN A5                     // OLED screen clock pin
 
 #ifdef RF_NANO
 // If you are using an RF-Nano, you have to switch CE and CS pins.
@@ -223,7 +221,6 @@ Servo servo1;                                       // Create servo object to co
 Servo servo2;                                       // Create servo object to control a servo
 byte servo1_maximum_degrees = 180;                  // Servo type. Does your first servo go to 180 or to 270 degrees?
 byte servo2_maximum_degrees = 180;                  // Servo type. Does your second servo go to 180 or to 270 degrees?
-//boolean slow_servo_movement = false;
 int servo_slow_step = 1024;
 #endif
 
@@ -312,7 +309,6 @@ void setup()
   Serial.println(F("I am using RF_NANO settings"));
 #endif
 
-  //Serial.print(F("-Servo starting state: ")); Serial.println(desired_pwm_actuator1_state);
 
 #ifdef HAS_DISPLAY
   // Initiate the display
@@ -321,6 +317,7 @@ void setup()
   oled.ssd1306WriteCmd(SSD1306_DISPLAYON);
   oled.setScroll(false);
   oled.setCursor(0,0);
+  oled.set2X();
   oled.print(string1);
 #endif
 
@@ -330,7 +327,6 @@ void setup()
   }else{
     Serial.println(F("! NOT CONNECTED TO GATEWAY"));  
   }
-
 
 
   // Set initial pin states
@@ -437,7 +433,6 @@ void setup()
 #endif
 
 
-
 #ifdef HAS_DISPLAY
   Serial.println(F("I have an OLED screen"));
 #endif
@@ -445,8 +440,6 @@ void setup()
 #if defined HAS_DISPLAY && defined TWO_LINES
   Serial.println(F("My screen has two lines"));
 #endif
-
-  // TODO: text string storage and recovery in eeprom.
 
   wdt_enable(WDTO_8S);                              // Starts the watchdog timer. If it is not reset once every 2 seconds, then the entire device will automatically restart.                                
 }
@@ -559,6 +552,23 @@ void loop()
     send(binary_sensor_message.setSensor(BINARY_SENSOR2_CHILD_ID).set(binary_sensor2_state)); wait(RADIO_DELAY);
   }
 #endif
+
+
+#ifdef BINARY_SENSOR1_CONNECTED
+  boolean new_binary_sensor1_state = digitalRead(BINARY_SENSOR1_PIN);
+  if(new_binary_sensor1_state != binary_sensor1_state){
+    binary_sensor1_state = new_binary_sensor1_state;
+    send(binary_sensor_message.setSensor(BINARY_SENSOR1_CHILD_ID).set(binary_sensor1_state)); wait(RADIO_DELAY);
+  }
+#endif
+#ifdef BINARY_SENSOR2_CONNECTED
+  boolean new_binary_sensor2_state = digitalRead(BINARY_SENSOR2_PIN);
+  if(new_binary_sensor2_state != binary_sensor2_state){
+    binary_sensor2_state = new_binary_sensor2_state;
+    send(binary_sensor_message.setSensor(BINARY_SENSOR2_CHILD_ID).set(binary_sensor2_state)); wait(RADIO_DELAY);
+  }
+#endif
+
 
   wait(20); // Give the system some calm moment before reading the analog value.
   
