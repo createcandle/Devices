@@ -39,8 +39,8 @@
  */
 
 // PINS
-#define TOUCH_SCREEN_RX_PIN 4                       // The receive (RX) pin for the touchscreen. This connects to the transmit (TX) pin of the touchscreen.
-#define TOUCH_SCREEN_TX_PIN 5                       // The receive (TX) pin for the touchscreen. This connects to the transmit (RX) pin of the touchscreen.
+#define TOUCH_SCREEN_RX_PIN 5                       // The receive (RX) pin for the touchscreen. This connects to the transmit (TX) pin of the touchscreen.
+#define TOUCH_SCREEN_TX_PIN 6                       // The receive (TX) pin for the touchscreen. This connects to the transmit (RX) pin of the touchscreen.
 
 // The BME280 uses I2C, so its SDA (data) pin should be connected to pin A4 on the Arduino, and the sensor's SCL (clock) pin should be connected to pin A5 on the Arduino.
 
