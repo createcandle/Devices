@@ -528,7 +528,7 @@ void loop()
     pwm_actuator2_state = desired_pwm_actuator2_state;
     send(percentage_message.setSensor(PWM_ACTUATOR2_CHILD_ID).set(pwm_actuator2_state)); wait(RADIO_DELAY);
     Serial.print(F("percentage to servo: ")); Serial.println(percentage_to_servo(pwm_actuator2_state, servo2_maximum_degrees));
-    servo1.write(percentage_to_servo(pwm_actuator2_state, servo2_maximum_degrees));  
+    servo2.write(percentage_to_servo(pwm_actuator2_state, servo2_maximum_degrees));  
   }
 #endif
   
