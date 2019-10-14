@@ -255,10 +255,10 @@ void presentation()
 {
   sendSketchInfo(F("Candle maker tool"), F("1.0"));    // Send the name and version to the controller
 #ifdef BINARY_SENSOR1_CONNECTED
-  present(BINARY_SENSOR1_CHILD_ID, S_MOTION, F("On-off sensor 1"));
+  present(BINARY_SENSOR1_CHILD_ID, S_MOTION, F("Binary sensor 1"));
 #endif
 #ifdef BINARY_SENSOR2_CONNECTED
-  present(BINARY_SENSOR2_CHILD_ID, S_MOTION, F("On-off sensor 2"));  
+  present(BINARY_SENSOR2_CHILD_ID, S_MOTION, F("Binary sensor 2"));  
 #endif
 
 #ifdef ANALOG_SENSOR1_CONNECTED
@@ -276,10 +276,10 @@ void presentation()
 #endif
 
 #ifdef PWM_ACTUATOR1_CONNECTED
-  present(PWM_ACTUATOR1_CHILD_ID, S_DIMMER, F("Servo control 1"));
+  present(PWM_ACTUATOR1_CHILD_ID, S_DIMMER, F("Servo 1"));
 #endif
 #ifdef PWM_ACTUATOR2_CONNECTED
-  present(PWM_ACTUATOR2_CHILD_ID, S_DIMMER, F("Servo control 2")); 
+  present(PWM_ACTUATOR2_CHILD_ID, S_DIMMER, F("Servo 2")); 
 #endif
 
 #ifdef ANALOG_ACTUATOR1_CONNECTED
@@ -290,11 +290,11 @@ void presentation()
 #endif
 
 #ifdef HAS_DISPLAY
-  present(TEXT_STRING1_CHILD_ID, S_INFO, F("Display text 1"));
+  present(TEXT_STRING1_CHILD_ID, S_INFO, F("Text 1"));
 #endif
 
 #if defined HAS_DISPLAY && defined TWO_LINES
-  present(TEXT_STRING2_CHILD_ID, S_INFO, F("Display text 2"));
+  present(TEXT_STRING2_CHILD_ID, S_INFO, F("Text 2"));
 #endif
 
   send_all_values = true;    
