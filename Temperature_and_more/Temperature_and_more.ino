@@ -23,7 +23,7 @@
 
 // You can enable and disable the settings below by adding or removing double slashes ( // ) in front of a line.
 
-#define SECONDS_BETWEEN_SENDING 10                  // Sleep time between reads for the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute. MAximum is 255 (because the value is stored as a byte, instead of the bigger 'int')
+#define SECONDS_BETWEEN_SENDING 60                  // Sleep time between reads for the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute. MAximum is 255 (because the value is stored as a byte, instead of the bigger 'int')
 
 #define HAS_TOUCH_SCREEN                            // Did you connect a touch screen?
 
@@ -50,8 +50,8 @@
 #define MY_RF24_CE_PIN 10                           // Used by the MySensors library.
 #endif
 
-#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
-#define DEBUG_SCREEN                              // Do you want to see extra debugging information about the touch screen in the serial output?
+//#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
+//#define DEBUG_SCREEN                              // Do you want to see extra debugging information about the touch screen in the serial output?
 //#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 
@@ -350,8 +350,6 @@ void setup() {
 }
 
 
-
-
 void loop()
 {
   // If a presentation is requested, we also send the values of the children.
@@ -363,10 +361,8 @@ void loop()
     send_values();
   }
 
-
   static unsigned long previousMillis = 0;          // Used to keep track of time.
   static byte intervalCounter = 255;                // How may intervals have passed.
-
   
 #ifdef HAS_TOUCH_SCREEN    
   // Check if the screen is being touched.
@@ -390,30 +386,11 @@ void loop()
     }else{
       intervalCounter++;
     }
-
     //Serial.println(intervalCounter);
     
     wdt_reset(); // Reset the watchdog timer
 
 
-
-
-/*
-#ifdef HAS_DISPLAY
-    // progress bar integrated in a horizontal separation line
-    mySerial.print(F("PL(0,70,"));
-      mySerial.print(String(intervalCounter * 4)); 
-      mySerial.print(F(",70,"));
-      mySerial.print(String(7 + lineColor)); 
-      mySerial.println(F(");"));
-#endif
-*/
-
-
-    //char value_string[7];
-    //memset(value_string,0,sizeof(value_string));
-    //draw_sun();
-    
     // Clock schedule
     switch (intervalCounter) {
 
@@ -492,23 +469,13 @@ void loop()
         setCur(SCREEN_PADDING,SCREEN_PADDING + ITEM_HEIGHT + LABEL_HEIGHT);
         fontSize(4);
         
-        // Show temperature value on the screen
-        /*
-        itoa(current_humidity, value_string, 10);    
-  
-        byte string_length = 2;
-        if( current_humidity < 10){ string_length = 1; }
-        if( current_humidity > 99){ string_length = 3; }
-        
-        writeString(value_string,string_length);
-        */
-  
+        // Show humidity value on the screen  
         displayNumber(current_humidity);
         fontSize(2);
         writeString("%",1);
 
-        fontSize(4);
         // Show quality opinion on the screen.
+        fontSize(4);
         if (current_humidity > 0 && current_humidity < 30){
           writeString(" DRY",4);
         }
@@ -535,8 +502,8 @@ void loop()
       Serial.print(F("Sending pressure ")); Serial.println(pressure);
       send(pressure_message.set((pressure),1));
 
-      //forecast = sample(pressure/100);
-      forecast = random(5);
+      forecast = sample(pressure/100);
+      //forecast = random(5);                         // Show a random icon. This is used in exhibits, to make it a bit more interesting.
 
       if (pressure != previous_pressure || forecast != lastForecast) {
         previous_pressure = pressure;
@@ -995,8 +962,6 @@ void readResponse()
   byte rc;                                          // Hold the byte form the serial stream that we're examining.
   
   byte c = touch_screen_serial.peek();
-  //Serial.print(F("SOME SERIAL DATA. Available:")); Serial.println(  availableSerialCount );
-  //Serial.print(F("Peek:")); Serial.println(  c );
   if( c != startMarker ){
     rc = touch_screen_serial.read();
     Serial.print(F("throwing away left over touch_screen_serial byte:")); Serial.println(rc);
@@ -1077,11 +1042,11 @@ void basicCommand(const char* cmd)
 #ifdef DEBUG_SCREEN
   Serial.println(F("BASIC COMMAND"));
 #endif
-  if( touch_screen_serial.available() ){                       // If necessary, clear old messages from the serial buffer.
+  if( touch_screen_serial.available() ){            // If necessary, clear old messages from the serial buffer.
     clearReceivedBuffer();
   } 
 
-  touch_screen_serial.write(0x7E);                             // Starting byte, is always the same.
+  touch_screen_serial.write(0x7E);                  // Starting byte, is always the same.
   byte b = 0;
   while( b < MAX_BASIC_COMMAND_LENGTH ){            // How many bytes are the basic commands at most?
     touch_screen_serial.write( pgm_read_byte(&cmd[b]) );
@@ -1114,7 +1079,7 @@ void waitForResponse() // From the touch screen
   Serial.print(F("wait time: ")); Serial.println(b);
 #endif  
   if( touch_screen_serial.available() > 0 ){
-    wait(10); // Perhaps some more bytes will show up.
+    wait(10);                                       // Perhaps some more bytes will show up.
     while( touch_screen_serial.available() > 0 ){   // Throwing away the response. All we care about is touch messages, and they are handled in the readResponse function.
       byte x = touch_screen_serial.read();
       //Serial.print(x); Serial.print(F("-"));
