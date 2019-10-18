@@ -14,15 +14,14 @@
 
 
 #define MEASUREMENT_INTERVAL 60                    // Seconds between measurements. How many seconds between measurements? Recommended is at least 120 seconds. The minimum is 15 seconds.
-#define AVERAGE_HOURS 1                             // Averaging period. Over how many hours should the average be calculated? If the device has been on shorter than this period, it will show the average until then.
 
 #define HAS_DISPLAY                                 // Did you connect an OLED display? If you have connected a small OLED dislay it will show the latest measurements.
 
 //#define SHOW_DATAVIZ                              // Show a basic datavizualisation on the display? This vizualisation is experimental and far from perfect, but might be fun to try.
 
-#define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the network? For privacy or security reasons you may prefer a stand-alone device.
+#define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the network? For privacy or security reasons you may prefer a stand-alone device. If you do allow the device to connect, you can connect a toggle switch to pin 6 to change the connection state at any time.
 
-//#define ALLOW_FAKE_DATA                             // Allow fake data to be sent? This is an experimental feature. It's designed to make the sensor less intrusive in some social situations.
+//#define ALLOW_FAKE_DATA                           // Allow fake data to be sent? This is an experimental feature, and requires you to attach a switch to pin 5. It's designed to make the sensor less intrusive in some social situations, allowing you to pretend you are not smoking/cooking.
 
 //#define MY_REPEATER_FEATURE                       // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help the signal spread further.
 
@@ -36,6 +35,9 @@
 */
 
 //#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor? This will help you check if the radio is working ok.
+
+
+#define AVERAGE_HOURS 1                             // Averaging period. Over how many hours should the average be calculated? If the device has been on shorter than this period, it will show the average until then.
 
 
 // PINS
@@ -65,7 +67,7 @@
 #define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors advanced security
-#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "smarthome"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
@@ -81,7 +83,7 @@
 
 
 
-#define RF_DELAY 150                                // Milliseconds between sensing radio signals during the presentation phase. Gives the radio some time to breathe in between working, and time to listen to a response.
+#define RADIO_DELAY 150                                // Milliseconds between sensing radio signals during the presentation phase. Gives the radio some time to breathe in between working, and time to listen to a response.
 #define LOOPDURATION 1000                           // The main loop runs every x milliseconds. It's like a second counter on a clock.
 
 
@@ -112,12 +114,15 @@ SDS011 my_sds;
 // Mysensors settings.
 #define CHILD_ID_DUST_PM10 0
 #define CHILD_ID_DUST_PM25 1
+#define ACTIVATED_CHILD_ID 2
 MyMessage message_dust(CHILD_ID_DUST_PM10, V_LEVEL); // Sets up the message format for actual dust messages.
 MyMessage message_prefix(CHILD_ID_DUST_PM10, V_UNIT_PREFIX); // Sets up the MySensors prefix message
+MyMessage relaymsg(ACTIVATED_CHILD_ID, V_STATUS);   // Toggle message
+
 
 
 // Other
-static unsigned long lastLoopTime = 0;              // Holds the last time the main loop ran.
+unsigned long lastLoopTime = 0;                     // Holds the last time the main loop ran.
 int loopCounter = MEASUREMENT_INTERVAL;             // Count how many loops have passed.
 int measurements_counter = 0;                       // Used by averaging function.
 byte vizPosition = 30;                              // Used by the experimenal data vizualisation option.
@@ -135,6 +140,7 @@ float fakeness_proportion = 0;                      // How these two values rela
 // Connection toggle feature
 boolean desired_connecting_to_network = false;
 boolean connecting_to_network = true;
+boolean may_send_data = true;
 
 void presentation()
 {
@@ -143,8 +149,9 @@ void presentation()
   sendSketchInfo(F("Fine dust sensor"), F("1.1"));
   
   // Register all child sensors with the gateway 
-  present(CHILD_ID_DUST_PM10, S_DUST, F("10 micrometers & smaller")); delay(RF_DELAY);
-  present(CHILD_ID_DUST_PM25, S_DUST, F("2.5 micrometers")); delay(RF_DELAY);
+  present(CHILD_ID_DUST_PM10, S_DUST, F("10 micrometers & smaller")); delay(RADIO_DELAY);
+  present(CHILD_ID_DUST_PM25, S_DUST, F("2.5 micrometers")); delay(RADIO_DELAY);
+  present(ACTIVATED_CHILD_ID, S_BINARY, F("data transmission"));
 
   send_all_values = true;
 #endif   
@@ -175,24 +182,37 @@ void setup()
   //delay(1000);
 #endif
 
-#if not defined(ALLOW_CONNECTING_TO_NETWORK)
-  Serial.println("This device will not connect to the network.")
-#endif
 
+#ifdef ALLOW_CONNECTING_TO_NETWORK
   // Check if there is a network connection
   if(isTransportReady()){
     Serial.println(F("Connected to gateway!"));
-
+    
 #ifdef HAS_DISPLAY    
     // Show connection icon on the display
     oled.setCursor(80,0);
     oled.print(F("W"));
 #endif
+
   }else{
-#ifdef ALLOW_CONNECTING_TO_NETWORK
-     Serial.println(F("! NO CONNECTION")); 
-#endif 
+     Serial.println(F("! NO CONNECTION"));  
   }
+
+#ifdef HAS_DISPLAY    
+    // Show data transmission icon on the display
+    oled.setCursor(70,0);
+    if(may_send_data){                              // A small "T" icon on the screen reflects that data transmission is currently allowed.
+      oled.print(F("T"));
+    }
+    else{
+      oled.print(F(" "));
+    }
+#endif
+
+  
+#else
+  Serial.println("This device will not connect to the network.")
+#endif
 
   // Place labels on the screen
 #ifdef HAS_DISPLAY
@@ -211,11 +231,17 @@ void setup()
 void send_values()
 {
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-  sendWithPermission(message_prefix.setSensor(CHILD_ID_DUST_PM10).set( F("ug/m3") ),0); delay(RF_DELAY);
-  sendWithPermission(message_dust.setSensor(CHILD_ID_DUST_PM10).set(p10,1),0); delay(RF_DELAY);
   
-  sendWithPermission(message_prefix.setSensor(CHILD_ID_DUST_PM25).set( F("ug/m3") ),0); delay(RF_DELAY);
-  sendWithPermission(message_dust.setSensor(CHILD_ID_DUST_PM25).set(p25,1),0); delay(RF_DELAY);
+  send(message_prefix.setSensor(CHILD_ID_DUST_PM10).set( F("ug/m3") ),0); delay(RADIO_DELAY);
+  if(may_send_data){
+    send(message_dust.setSensor(CHILD_ID_DUST_PM10).set(p10,1),0); delay(RADIO_DELAY);
+  }
+  send(message_prefix.setSensor(CHILD_ID_DUST_PM25).set( F("ug/m3") ),0); delay(RADIO_DELAY);
+  if(may_send_data){
+    send(message_dust.setSensor(CHILD_ID_DUST_PM25).set(p25,1),0); delay(RADIO_DELAY);
+  }
+  send(relaymsg.setSensor(ACTIVATED_CHILD_ID).set(may_send_data)); wait(RADIO_DELAY);
+
 #endif
 }
 
@@ -234,10 +260,9 @@ void loop() {
 
 
 #ifdef ALLOW_FAKE_DATA
-  if( digitalRead(TOGGLE_FAKE_DATA_PIN) != desired_sending_fake_data ){
-    wait(10);
-    desired_sending_fake_data = digitalRead(TOGGLE_FAKE_DATA_PIN);
-    wait(10);
+  boolean fake_data_pin_state = digitalRead(TOGGLE_FAKE_DATA_PIN);
+  if( fake_data_pin_state != desired_sending_fake_data ){
+    desired_sending_fake_data = fake_data_pin_state;
     Serial.print(F("FAKE DATA TOGGLED TO  ")); Serial.println(desired_sending_fake_data);
 #ifdef HAS_DISPLAY
     oled.set1X();
@@ -249,6 +274,7 @@ void loop() {
       oled.print(F(" "));
     }
 #endif
+    wait(20);
   }
 #endif
 
@@ -290,21 +316,12 @@ void loop() {
     }
     wdt_reset();
 
-  /*
-  // Used during development
-  if(measurements_counter == 10 && desired_sending_fake_data == false){
-    Serial.println(); Serial.println(F("INITIATING FAKENESS----------------------------------------"));
-    desired_sending_fake_data = true;
-  }
-  */
-
-
-
 #ifdef HAS_DISPLAY
     // Update the second countdown on the display.
     oled.set1X();
     oled.setCursor(100,0);
-    oled.print(MEASUREMENT_INTERVAL - loopCounter); oled.print(F("  "));
+    oled.print(MEASUREMENT_INTERVAL - loopCounter);
+    oled.clearToEOL();
 #endif
       
 
@@ -345,7 +362,7 @@ void loop() {
         // PM2.5 levels based on opinions of Dutch scientists and the World Health Organization. Keep your yearly average below 10.
         oled.setCursor(70,3);
         if(sending_fake_data){oled.print(F("FAKED"));}
-        else if (p25 == 0){   oled.print(F("     "));}
+        else if (p25 == 0){   oled.clearToEOL();     }
         else if (p25 <= 3){   oled.print(F("GREAT"));}
         else if (p25 <= 5){   oled.print(F("GOOD "));}
         else if (p25 <= 8){   oled.print(F("OK   "));}
@@ -355,7 +372,7 @@ void loop() {
         // PM10 levels based on opinions of Dutch scientists and the World Health Organization. Keep your yearly average below 20.
         oled.setCursor(70,6);
         if(sending_fake_data){oled.print(F("FAKED"));}
-        else if (p10 == 0){   oled.print(F("     "));}
+        else if (p10 == 0){   oled.clearToEOL();     }
         else if (p10 <= 5){   oled.print(F("GREAT"));}
         else if (p10 <= 10){  oled.print(F("GOOD "));}
         else if (p10 <= 20){  oled.print(F("OK   "));}
@@ -363,7 +380,7 @@ void loop() {
         else if (p10 >  30){  oled.print(F("BAD  "));}
 #endif
 
-        if(MEASUREMENT_INTERVAL > 29){                    // Only goes to sleep if there is a long enough interval between desired measurements.
+        if( MEASUREMENT_INTERVAL > 29 ){                    // Only goes to sleep if there is a long enough interval between desired measurements.
           Serial.println(F("Sensor going to sleep."));
           my_sds.sleep();
         }
@@ -413,9 +430,11 @@ void loop() {
               sending_fake_data = true;
             }
           }
+#ifdef DEBUG
           else{
-            Serial.println(F("Not enough data to initiate sending of fake data yet. Will start when a few more measurements have arrived."));
+            Serial.println(F("Measurement not useful for intiating fake data."));
           }
+#endif
         }
         if( desired_sending_fake_data == false && sending_fake_data == true ){
           Serial.print(F("Will send real data again."));
@@ -428,11 +447,11 @@ void loop() {
           Serial.print(F("2.5 Addition: ")); Serial.println(p25_addition);
           p25_addition = average_p25 + p25_addition;
           Serial.print(F("<< sending FAKE 2.5: ")); Serial.println(p25_addition);
-          sendWithPermission(message_dust.setSensor(CHILD_ID_DUST_PM25).set(p25_addition,1),1); // This message asks the controller to send and acknowledgement it was received.
+          send(message_dust.setSensor(CHILD_ID_DUST_PM25).set(p25_addition,1),1); // This message asks the controller to send and acknowledgement it was received.
         }
         else{
           Serial.print(F("<< sending 2.5: ")); Serial.println(p25);
-          sendWithPermission(message_dust.setSensor(CHILD_ID_DUST_PM25).set(p25,1),1); // This message asks the controller to send and acknowledgement it was received.
+          send(message_dust.setSensor(CHILD_ID_DUST_PM25).set(p25,1),1); // This message asks the controller to send and acknowledgement it was received.
         }
 #endif
         break;
@@ -446,12 +465,15 @@ void loop() {
           Serial.print(F("p10_addition = ")); Serial.println(p10_addition);
           p10_addition = p10_addition + average_p10;
           Serial.print(F("<< sending FAKE 10.0: ")); Serial.println(p10_addition);
-          //send(message_dust.setSensor(CHILD_ID_DUST_PM25).set(p10_addition,1),1); // This message asks the controller to send and acknowledgement it was received.
-          sendWithPermission(message_dust.setSensor(CHILD_ID_DUST_PM25).set(p10_addition,1),1);
+          if(may_send_data){
+            send(message_dust.setSensor(CHILD_ID_DUST_PM25).set(p10_addition,1),1); // This message asks the controller to send and acknowledgement it was received.
+          }
         }
         else{
           Serial.print(F("-> sending 10.0: ")); Serial.println(p10);
-          sendWithPermission(message_dust.setSensor(CHILD_ID_DUST_PM10).set(p10,1),0);
+          if(may_send_data){
+            send(message_dust.setSensor(CHILD_ID_DUST_PM10).set(p10,1),0);
+          }
         }
 #endif
 
@@ -535,28 +557,33 @@ void receive(const MyMessage &message)
 {
 #ifdef ALLOW_CONNECTING_TO_NETWORK
 
-  if(connecting_to_network){
-    
-    if (message.isAck()) {
-      Serial.println(F(">> Received acknowledgement"));
-      received_echo = true;
+
+  if (message.isAck()) {
+    Serial.println(F(">> Received acknowledgement"));
+    received_echo = true;
+  }
+
+  if (message.type == V_STATUS && message.sensor == ACTIVATED_CHILD_ID ){
+    may_send_data = message.getBool(); //?RELAY_ON:RELAY_OFF;
+    send(relaymsg.setSensor(ACTIVATED_CHILD_ID).set(may_send_data)); // We echo the new state to the controller, to say "we got the message".
+    Serial.print(F("-New may_send_data state: ")); Serial.println(may_send_data);
+#ifdef HAS_DISPLAY    
+    // Show connection icon on the display
+    oled.setCursor(70,0);
+    if(may_send_data){                              // A small "T" icon on the screen reflects that data transmission is currently allowed.
+      oled.print(F("T"));
     }
-
+    else{
+      oled.print(F(" "));
+    }
+#endif
+    
   }
+  
 #endif
 }
 
-boolean sendWithPermission(MyMessage &msg, boolean require_echo)
-{
-#ifdef ALLOW_CONNECTING_TO_NETWORK
-  // Check permission and send here
-  if (connecting_to_network){
-    send(msg, require_echo);
-    return true;
-  }
-#endif
-  return false;
-}
+
 
 /** This device uses the MySensors library:
  * 
