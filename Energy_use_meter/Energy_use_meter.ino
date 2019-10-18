@@ -1,4 +1,3 @@
-j
 /*
  * 
  * This devices counts LED blinks from your power company's measument device. This allows it to calculate how many watts your home is currently using. By measuring this over time, it becomes possible to keep track of how many kwh your home is using.
@@ -236,12 +235,6 @@ void loop()
    //  kwh_day_total = 0;
    //}
 
-
-    // TODO al deze dingen op volgorde zetten. Lange tijd eerst, en dan steeds kleiner wordend, naar elke seconde dingen?
-
-    //if( seconds_left_in_the_hour < 1 ){            // If a full hour has passed
-    //seconds_left_in_the_hour = 3600;
-
     // Send total kwh used in the previous hour.
     float kwh_hour_total = kwh - previous_kwh_hour_total;
     sendWithPermission(kwh_message.setSensor(KWH_PER_HOUR_CHILD_ID).set(kwh_hour_total, 4),0); // Send kwh value to gateway
@@ -337,10 +330,7 @@ void loop()
 #endif
       }
     }
-    
-
-// Idea: show dots on screen as pulses increase? During the 10 second period. Then resets. Ook de count uit de vorige ronde tonen? Nah, 10 seconden kan iemand wel kijken naar t scherm.
-    
+       
     // Pulse count value has changed
     if( pulse_count != old_pulse_count ){
 #ifdef HAS_DISPLAY
