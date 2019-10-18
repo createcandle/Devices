@@ -13,7 +13,7 @@
 * SETTINGS */ 
 
 
-#define MEASUREMENT_INTERVAL 20                    // Seconds between measurements. How many seconds between measurements? Recommended is at least 120 seconds. The minimum is 15 seconds.
+#define MEASUREMENT_INTERVAL 60                    // Seconds between measurements. How many seconds between measurements? Recommended is at least 120 seconds. The minimum is 15 seconds.
 #define AVERAGE_HOURS 1                             // Averaging period. Over how many hours should the average be calculated? If the device has been on shorter than this period, it will show the average until then.
 
 #define HAS_DISPLAY                                 // Did you connect an OLED display? If you have connected a small OLED dislay it will show the latest measurements.
@@ -22,11 +22,11 @@
 
 #define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the network? For privacy or security reasons you may prefer a stand-alone device.
 
+//#define ALLOW_FAKE_DATA                             // Allow fake data to be sent? This is an experimental feature. It's designed to make the sensor less intrusive in some social situations.
+
 //#define MY_REPEATER_FEATURE                       // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help the signal spread further.
 
-#define ALLOW_FAKE_DATA                             // Allow fake data to be sent? This is an experimental feature. It's designed to make the sensor less intrusive in some social situations.
-
-//#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
 
 /* END OF SETTINGS
