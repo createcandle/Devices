@@ -3,8 +3,7 @@
  * DESCRIPTION
  * 
  * This device can measure the moisture of 5 different plants. It uses the cheap 'capacitive analog 
- * moisture sensor' that you can get for about 3 dollars an Aliexpress or eBay. For example:
- * https://www.aliexpress.com/item/Analog-Capacitive-Soil-Moisture-Sensor-V1-2-Corrosion-Resistant-Z09-Drop-ship/32858273308.html
+ * moisture sensor' that you can get for about a dollar a piece online.
  * 
  * In a future version, each plant' moisture value can also be responded to individually, either by turning on an LED (wire that to the plan, and you can see which one is thirsty) or, if you want, per-plant automated irrigation by connecting a little solenoid..
  * 
