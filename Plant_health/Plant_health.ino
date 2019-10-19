@@ -51,7 +51,7 @@
 //#define MY_DISABLE_RAM_ROUTING_TABLE_FEATURE      // Saves a little memory.
 
 // MySensors security
-#define MY_ENCRYPTION_SIMPLE_PASSWD "smarthome"
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup noise makes signing more secure.
 
@@ -96,8 +96,8 @@ boolean send_all_values = true;
 static const uint8_t analog_pins[] = {A0,A1,A2,A3,A4,A5};
 byte moistureLevels[6] = {1, 2, 3, 4, 5, 6};
 byte moistureThresholds[6] = {35, 35, 35, 35, 35, 35}; // for each plant we can have a unique moisture level to compare against.
-MyMessage thresholdMsg(0, V_PERCENTAGE);            // used to create a dimmer on the controller that controls the mosture threshold;
-MyMessage msg(0, V_LEVEL);                          // used to send moisture level data to the gateway
+MyMessage msg(0, V_LEVEL);                          // used to send moisture level data to the gateway. Should be V_LEVEL.
+MyMessage thresholdMsg(1, V_PERCENTAGE);            // used to create a dimmer on the controller that controls the mosture threshold;
 
 
 
@@ -107,7 +107,9 @@ void presentation()
   sendSketchInfo(F("Plant Health"), F("0.1"));  wait(RADIO_DELAY);
 
   // Present the sensors
-  //for (byte i=0; i<NUMBER_OF_SENSORS*2 ; i=i+2) {
+
+  // For now, it uses S_MOISTURE instead of S_MOISTURE.
+  //for (byte i=0; i<NUMBER_OF_SENSORS ; i=i+1) {
   present(0, S_MOISTURE, "Sensor 1");  wait(RADIO_DELAY);       // present all the sensors
   present(1, S_DIMMER, "Threshold 1");  wait(RADIO_DELAY);       // present the dimmers to set the level with.
   if(NUMBER_OF_SENSORS > 1){
@@ -189,7 +191,7 @@ void loop()
 #ifdef ALLOW_CONNECTING_TO_NETWORK
   // Send everything to the controller. This will initialise things there.
   if( send_all_values ){
-    //Serial.println(F("Sending all values"));
+    Serial.println(F("Sending all values"));
     send_all_values = false;
     send_values();
   }
