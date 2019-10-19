@@ -14,7 +14,7 @@
 
 #define SLEEPTIME 100                               // Measurement interval. How many seconds should pass between checking on the plants and sending the data? Don't make this less than 15 or more than 255.
 
-//#define MY_REPEATER_FEATURE                         // ACt as repeater. Do you want this node to also be act as repeater for other devices?
+//#define MY_REPEATER_FEATURE                         // Act as repeater. Do you want this node to also be act as repeater for other devices?
 
 #define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
@@ -73,7 +73,7 @@
 #define SLEEPTIME 100                               // In seconds, how often should a measurement be made and sent to the server? The maximum delay between measurements is once every 254 seconds, but if you change "byte" to "int" further down in the code you could create more time between each loop.
 #define LOOPDURATION 1000                           // The main loop runs every x milliseconds. This main loop starts the modem, and from then on periodically requests the password.
 
-#define RADIO_DELAY 100                                // Milliseconds betweeen radio signals during the presentation phase.
+#define RADIO_DELAY 100                             // Milliseconds betweeen radio signals during the presentation phase.
 
 #define ALLOW_CONNECTING_TO_NETWORK
 
@@ -110,20 +110,20 @@ void presentation()
 
   // For now, it uses S_MOISTURE instead of S_MOISTURE.
   //for (byte i=0; i<NUMBER_OF_SENSORS ; i=i+1) {
-  present(0, S_MOISTURE, "Sensor 1");  wait(RADIO_DELAY);       // present all the sensors
-  present(1, S_DIMMER, "Threshold 1");  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+  present(0, S_MOISTURE, F("Sensor 1"));  wait(RADIO_DELAY);       // present all the sensors
+  present(1, S_DIMMER, F("Threshold 1"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
   if(NUMBER_OF_SENSORS > 1){
-    present(2, S_MOISTURE, "Sensor 2");  wait(RADIO_DELAY);       // present all the sensors
-    present(3, S_DIMMER, "Threshold 2");  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+    present(2, S_MOISTURE, F("Sensor 2"));  wait(RADIO_DELAY);       // present all the sensors
+    present(3, S_DIMMER, F("Threshold 2"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
     if(NUMBER_OF_SENSORS > 2){
-      present(4, S_MOISTURE, "Sensor 3");  wait(RADIO_DELAY);       // present all the sensors
-      present(5, S_DIMMER, "Threshold 3");  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+      present(4, S_MOISTURE, F("Sensor 3"));  wait(RADIO_DELAY);       // present all the sensors
+      present(5, S_DIMMER, F("Threshold 3"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
       if(NUMBER_OF_SENSORS > 3){
-        present(6, S_MOISTURE, "Sensor 4");  wait(RADIO_DELAY);       // present all the sensors
-        present(7, S_DIMMER, "Threshold 4");  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+        present(6, S_MOISTURE, F("Sensor 4"));  wait(RADIO_DELAY);       // present all the sensors
+        present(7, S_DIMMER, F("Threshold 4"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
         if(NUMBER_OF_SENSORS > 4){
-          present(8, S_MOISTURE, "Sensor 5");  wait(RADIO_DELAY);       // present all the sensors
-          present(9, S_DIMMER, "Threshold 5");  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+          present(8, S_MOISTURE, F("Sensor 5"));  wait(RADIO_DELAY);       // present all the sensors
+          present(9, S_DIMMER, F("Threshold 5"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
         }
       }
     }
