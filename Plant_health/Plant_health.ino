@@ -10,7 +10,7 @@
  * 
  * SETTINGS */
 
-#define NUMBER_OF_SENSORS 2                         // Sensor count. How many moisture sensors have you connected?
+#define NUMBER_OF_SENSORS 1                         // Sensor count. How many moisture sensors have you connected?
 
 #define SLEEPTIME 100                               // Measurement interval. How many seconds should pass between checking on the plants and sending the data? Don't make this less than 15 or more than 255.
 
