@@ -9,11 +9,13 @@
  * 
  * SETTINGS */
 
-#define NUMBER_OF_SENSORS 1                         // Sensor count. How many moisture sensors have you connected?
+#define NUMBER_OF_SENSORS 3                         // Sensor count. How many moisture sensors have you connected?
 
-#define SLEEPTIME 100                               // Measurement interval. How many seconds should pass between checking on the plants and sending the data? Don't make this less than 15 or more than 255.
+#define HAS_DISPLAY                                 // Has OLED display. Did you attach an OLED display?
 
-//#define MY_REPEATER_FEATURE                         // Act as repeater. Do you want this node to also be act as repeater for other devices?
+#define MEASUREMENT_INTERVAL 7                      // Measurement interval. How many seconds should pass between checking on the plants and sending the data? Don't make this less than 15.
+
+//#define MY_REPEATER_FEATURE                       // Act as repeater. Do you want this node to also be act as repeater for other devices?
 
 #define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
@@ -69,60 +71,79 @@
 //
 
 #define IRRIGATION_RELAYS 0                         // How many irrigation relays are connected?
-#define SLEEPTIME 100                               // In seconds, how often should a measurement be made and sent to the server? The maximum delay between measurements is once every 254 seconds, but if you change "byte" to "int" further down in the code you could create more time between each loop.
 #define LOOPDURATION 1000                           // The main loop runs every x milliseconds. This main loop starts the modem, and from then on periodically requests the password.
 
 #define RADIO_DELAY 100                             // Milliseconds betweeen radio signals during the presentation phase.
 
 #define ALLOW_CONNECTING_TO_NETWORK
 
+
 //
 // Do not change below this line
 // 
+
+
+#ifdef HAS_DISPLAY
+  #define OLED_I2C_ADDRESS 0x3C
+  #include <SSD1306Ascii.h>                         // Simple drivers for the screen.
+  #include <SSD1306AsciiAvrI2c.h>                   // "SSD1306Ascii".
+  SSD1306AsciiAvrI2c oled;
+#endif
+
+unsigned long lastLoopTime = 0;
+boolean send_all_values = true;
+boolean may_transmit = true;
+boolean actually_connected = false;
+
+
+static const uint8_t analog_pins[] = {A0,A1,A2,A3,A6,A7};
+byte moistureLevels[6] = {1, 2, 3, 4, 5, 6};
+byte moistureThresholds[6] = {35, 35, 35, 35, 35, 35}; // for each plant we can have a unique moisture level to compare against.
+
+
+#define TRANSMIT_CHILD_ID        100                 // Is the device allowed to transmit data?
+
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK
 
 #include <MySensors.h>
 
 
 
-#ifdef HAS_SCREEN
-#include <SoftwareSerial.h>
-SoftwareSerial mySerial(7,6);                       // RX, TX
-#endif
-
-
-boolean send_all_values = true;
-
-static const uint8_t analog_pins[] = {A0,A1,A2,A3,A4,A5};
-byte moistureLevels[6] = {1, 2, 3, 4, 5, 6};
-byte moistureThresholds[6] = {35, 35, 35, 35, 35, 35}; // for each plant we can have a unique moisture level to compare against.
 MyMessage msg(0, V_LEVEL);                          // used to send moisture level data to the gateway. Should be V_LEVEL.
 MyMessage thresholdMsg(1, V_PERCENTAGE);            // used to create a dimmer on the controller that controls the mosture threshold;
-
+MyMessage relay_msg(TRANSMIT_CHILD_ID, V_STATUS);    // Used to manage the data transission toggle  
 
 
 void presentation()
 {
   // Send the sketch version information to the gateway and Controller
-  sendSketchInfo(F("Plant Health"), F("0.1"));  wait(RADIO_DELAY);
+  sendSketchInfo(F("Plant Health"), F("1.0"));  wait(RADIO_DELAY);
+
+  present(TRANSMIT_CHILD_ID, S_BINARY, F("data transmission"));
 
   // Present the sensors
 
   // For now, it uses S_MOISTURE instead of S_MOISTURE.
   //for (byte i=0; i<NUMBER_OF_SENSORS ; i=i+1) {
   present(0, S_MOISTURE, F("Sensor 1"));  wait(RADIO_DELAY);       // present all the sensors
-  present(1, S_DIMMER, F("Threshold 1"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+  present(10, S_DIMMER, F("Threshold 1"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
   if(NUMBER_OF_SENSORS > 1){
-    present(2, S_MOISTURE, F("Sensor 2"));  wait(RADIO_DELAY);       // present all the sensors
-    present(3, S_DIMMER, F("Threshold 2"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+    present(1, S_MOISTURE, F("Sensor 2"));  wait(RADIO_DELAY);       // present all the sensors
+    present(11, S_DIMMER, F("Threshold 2"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
     if(NUMBER_OF_SENSORS > 2){
-      present(4, S_MOISTURE, F("Sensor 3"));  wait(RADIO_DELAY);       // present all the sensors
-      present(5, S_DIMMER, F("Threshold 3"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+      present(2, S_MOISTURE, F("Sensor 3"));  wait(RADIO_DELAY);       // present all the sensors
+      present(12, S_DIMMER, F("Threshold 3"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
       if(NUMBER_OF_SENSORS > 3){
-        present(6, S_MOISTURE, F("Sensor 4"));  wait(RADIO_DELAY);       // present all the sensors
-        present(7, S_DIMMER, F("Threshold 4"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+        present(3, S_MOISTURE, F("Sensor 4"));  wait(RADIO_DELAY);       // present all the sensors
+        present(13, S_DIMMER, F("Threshold 4"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
         if(NUMBER_OF_SENSORS > 4){
-          present(8, S_MOISTURE, F("Sensor 5"));  wait(RADIO_DELAY);       // present all the sensors
-          present(9, S_DIMMER, F("Threshold 5"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+          present(4, S_MOISTURE, F("Sensor 5"));  wait(RADIO_DELAY);       // present all the sensors
+          present(14, S_DIMMER, F("Threshold 5"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+          if(NUMBER_OF_SENSORS > 5){
+            present(5, S_MOISTURE, F("Sensor 6"));  wait(RADIO_DELAY);       // present all the sensors
+            present(15, S_DIMMER, F("Threshold 6"));  wait(RADIO_DELAY);       // present the dimmers to set the level with.
+          }
         }
       }
     }
@@ -130,42 +151,69 @@ void presentation()
 
   send_all_values = true;  
 }
+#endif
+
 
 void setup()
 {
   Serial.begin(115200);                             // Start serial output of data.
-  while (!Serial) {}                                // Wait for serial connection to be initiated
+  delay(1000);                                      // Wait for serial connection to be initiated
   Serial.println(F("Hello, I am a plant health device"));
 
-  //Serial.print("ids-"); Serial.println(ids[1]);
+#ifdef HAS_DISPLAY
+  // Initiate the display
+  oled.begin(&Adafruit128x64, OLED_I2C_ADDRESS);
+  oled.setFont(Adafruit5x7);
+  oled.ssd1306WriteCmd(SSD1306_DISPLAYON);
+  oled.setScroll(false);
+  oled.setCursor(0,0);
+  oled.print(F("PLANT HEALTH"));
+  oled.setCursor(0,2);
+  oled.print(F("Wait..."));
+#endif
 
-  // Setup pins for input
-  //for (byte i = 15; i < 21; i++) {
-  //}
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+  if( isTransportReady() ){                         // Check if a network connection has been established
+    Serial.println(F("Connected to gateway!"));
+    actually_connected = true;
+#ifdef HAS_DISPLAY    
+    // Show connection icon on the display
+    oled.setCursor(85,0);
+    oled.print(F("W"));
+#endif
 
-  if(isTransportReady()){
-    Serial.println(F("Connected to gateway"));
-  }else{
-    Serial.println(F("! NOT CONNECTED TO GATEWAY"));  
   }
+  else {
+     Serial.println(F("! NO CONNECTION")); 
+     actually_connected = false;
+  }
+#endif 
 
   // Setup pins for input
   for (int i = 0; i < NUMBER_OF_SENSORS; i++) { //or i <= 5
-    pinMode(analog_pins[i], INPUT); // experimental new: added the pullup.
-     wait(1);
+    pinMode(analog_pins[i], INPUT);
+    wait(1);
   }
 
-
+  if( loadState(TRANSMIT_CHILD_ID) < 2 ){
+    may_transmit = loadState(TRANSMIT_CHILD_ID);
+  }
+  else{
+    may_transmit = true;
+    saveState(TRANSMIT_CHILD_ID, 1);
+  }
 
   // load the threshold level from the built-in EEPROM memory.
   for (byte i=0; i<NUMBER_OF_SENSORS ; i++) {
     moistureThresholds[i] = loadState(i);
-    if(moistureThresholds[i] > 99){moistureThresholds[i] = 35;}
+    if( moistureThresholds[i] > 99 ){
+      moistureThresholds[i] = 35;                   // If the EEPROM value is not set, reset it to default
+    }
     Serial.print(F("Loaded: ")); Serial.println(moistureThresholds[i]);
-    request((i * 2) + 1, V_PERCENTAGE ); wait(RADIO_DELAY);
+    //request((i * 2) + 1, V_PERCENTAGE ); wait(RADIO_DELAY);
   }
   
-  Serial.println(F("Warming up the sensors (15 seconds).")); // to avoid weird measurements
+  Serial.println(F("Warming up the sensors (15 seconds).")); // To avoid weird measurements
   wait(15000);
 
   wdt_enable(WDTO_8S);                              // Starts the watchdog timer. If it is not reset once every 2 seconds, then the entire device will automatically restart.                                
@@ -173,14 +221,16 @@ void setup()
 
 
 
-
+#ifdef ALLOW_CONNECTING_TO_NETWORK
 void send_values()
 {
+  send( relay_msg.setSensor(TRANSMIT_CHILD_ID).set(may_transmit) );
+  
   for (byte i=0; i<NUMBER_OF_SENSORS ; i++) {
-    send( thresholdMsg.setSensor(i*2 + 1).set( moistureThresholds[i] ) );
+    send( thresholdMsg.setSensor(10 + i).set( moistureThresholds[i] ) );
   }
 }
-
+#endif
 
 
 
@@ -204,35 +254,12 @@ void loop()
   // Maximum time that can be scheduled is 4s * 250 loops = 1000 seconds. So the maximum time between sending data can be 16 minutes.
   //
 
-  static byte loopCounter = 0;                      // Counts the loops until the SLEEPTIME value has been reached. Then new data is sent to the controller.
+  static byte loopCounter = 0;                      // Counts the loops until the MEASUREMENT_INTERVAL value has been reached. Then new data is sent to the controller.
   static boolean loopDone = false;                  // used to make sure the 'once every millisecond' things only run once every millisecond (or 2.. sometimes the millis() function skips a millisecond.);
 
-  // Avoid the loop running at the speed of the processor (multiple times per millisecond). This entire construction saves memory by not using a long to store the last time the loop ran.
-  if( (millis() % LOOPDURATION) > LOOPDURATION - 4 && loopDone == true ) {
-    loopDone = false;  
-  }
-
-  // Main loop to time actions.
-  if( (millis() % LOOPDURATION) < 4 && loopDone == false ) { // the 4 is just a precaution: sometimes the milli() function skips a millisecond. This ensure the loop code still runs in that rare case.
-    loopDone = true;
+  if( millis() - lastLoopTime > LOOPDURATION ){
+    lastLoopTime = millis();
     wdt_reset(); // Reset the watchdog timer
-
-    byte selectedSensor = loopCounter % NUMBER_OF_SENSORS; // Each loop one of the sensors is checked
-
-    Serial.print(F("loopcounter: ")); Serial.println(loopCounter);
-    Serial.print(F("selectedSensor: ")); Serial.println(selectedSensor);
-    
-      int16_t moistureLevel = analogRead(analog_pins[selectedSensor]);
-      Serial.print(F(" moisture level (pre): "));
-      Serial.println(moistureLevel);
-      if(moistureLevel > 700){moistureLevel = 700;}
-      moistureLevel = map(moistureLevel,0,700,0,99); // The maximum voltage output of the capacitive sensor is 3V, so since we're measuring 0-5v about 614 is the highest value we'll ever get.
-      Serial.print(selectedSensor);
-      Serial.print(F(" moisture level %: "));
-      Serial.println(moistureLevel);
-
-      moistureLevels[selectedSensor] = moistureLevel;   
-
 
       // This is some experimental code to add watering funtionality (actuator). Will be expanded upon later.
       /*
@@ -250,29 +277,85 @@ void loop()
         //digitalWrite(shiftedDigitalPin, LOW);
       }
       */
-
-      if(loopCounter == 0){
-        Serial.println("send test");                       
-        // Whole dealing with the first sensor we also do a check if the server is responding ok. It it doesn't respond, remove the connection icon.
-        if(send(msg.setSensor(selectedSensor*2).set(moistureLevel),1)){ // Ask for a transmission receipt
-          Serial.println(F("Connection is ok"));
-        }else {
-          Serial.println(F("Connection lost")); 
-        }
+    
+    if(loopCounter < NUMBER_OF_SENSORS){       // During the first few loops the script will send updated data.
         
-      } else if(loopCounter < NUMBER_OF_SENSORS){       // During the first few loops the script will send updated data.
-        if(loopCounter == selectedSensor){                           // It sends sensor 0 at second 0. Sensor 1 at second 1, etc. This keeps the radio happy.
-          Serial.println(F("- sending data."));
-          byte calculated_child_id = selectedSensor*2;
-          Serial.println(F("calculated_child_id: ")); Serial.println(calculated_child_id);
-          send(msg.setSensor(calculated_child_id).set(moistureLevel),1);  // 0, 2, 4 etc
+      int16_t moistureLevel = analogRead(analog_pins[loopCounter]);
+      Serial.print(F(" moisture level (pre): "));
+      Serial.println(moistureLevel);
+      if(moistureLevel > 700){moistureLevel = 700;}
+      moistureLevel = map(moistureLevel,0,700,0,99); // The maximum voltage output of the capacitive sensor is 3V, so since we're measuring 0-5v about 614 is the highest value we'll ever get.
+      Serial.print(loopCounter);
+      Serial.print(F(" moisture level %: "));
+      Serial.println(moistureLevel);
+
+      moistureLevels[loopCounter] = moistureLevel;  
+
+
+#ifdef HAS_DISPLAY
+
+      oled.set1X();
+      if( NUMBER_OF_SENSORS < 4 ){
+        oled.setCursor(0,(loopCounter * 2) + 2);
+      } 
+      else {
+        oled.setCursor(0,loopCounter + 2);
+      }
+      oled.print(loopCounter + 1);
+      oled.print(F(" "));
+      if( NUMBER_OF_SENSORS < 4 ){
+        oled.set2X();                     // Increase font size if less than 4 sensors are attached.
+      }
+      
+      oled.print(moistureLevel);
+      oled.print(F("%"));
+
+      if(moistureLevel < 10){
+        oled.print(F(" "));
+      }
+      if( moistureLevel < moistureThresholds[loopCounter] ){
+        oled.print(F(" WATER"));
+      }
+      else{
+        oled.print(" OK");
+      }
+      oled.clearToEOL(); 
+
+#endif
+
+
+      if( may_transmit
+     ){
+        send(msg.setSensor(loopCounter).set(moistureLevel),1); // Ask for a receipt, to make sure the data was sent.
+      }
+
+#ifdef HAS_DISPLAY 
+      if( loopCounter == NUMBER_OF_SENSORS ){
+        oled.setCursor(85,0);
+        if( actually_connected ){
+          oled.print(F("W"));             // Show connection icon on the display
+        }
+        else{
+          oled.print(F(" "));             // Hide connection icon on the display
         }
       }
-    
-    loopCounter++;
-    if(loopCounter >= SLEEPTIME){                       // If enough time has passed, the counter is reset, and new data is sent.
-      loopCounter = 0;
+#endif
+
     }
+    loopCounter++;
+    if(loopCounter >= MEASUREMENT_INTERVAL){                       // If enough time has passed, the counter is reset, and new data is sent.
+      loopCounter = 0;
+      actually_connected = false;                       // Whether the device is actually succesfully connected to the network.
+    }
+#ifdef HAS_DISPLAY
+    // Show countdown to measurement
+    oled.set1X();
+    oled.setCursor(100,0);
+    oled.print(MEASUREMENT_INTERVAL - loopCounter);
+    oled.clearToEOL();
+#endif
+
+    
   }
 }
 
@@ -284,17 +367,24 @@ void receive(const MyMessage &message)
 
   if (message.isAck()) {
     Serial.println(F("-Got ACK"));
+    actually_connected = true;
     return;
   }
+
+  if( message.type == V_STATUS && message.sensor == TRANSMIT_CHILD_ID ){
+    may_transmit = message.getBool();
+    send(relay_msg.setSensor(TRANSMIT_CHILD_ID).set(may_transmit));
+    Serial.print(F(">> New data transmission state: ")); Serial.println(may_transmit);
+  }
   
-  if (message.type == V_PERCENTAGE) {
+  else if (message.type == V_PERCENTAGE) {
 
     //  Retrieve the power or dim level from the incoming request message
     int requestedLevel = atoi( message.data );
     Serial.print(F("Requested level is "));
     Serial.println( requestedLevel );
     
-    byte sensorID = (message.sensor - 1) / 2;
+    byte sensorID = (message.sensor - 10);
     // Adjust incoming level if this is a V_LIGHT variable update [0 == off, 1 == on]
     // requestedLevel *= ( message.type == V_LIGHT ? 100 : 1 );
 
@@ -307,9 +397,10 @@ void receive(const MyMessage &message)
     if(requestedLevel > 100){ requestedLevel = 100;}
     if(requestedLevel < 0){ requestedLevel = 0;}
 
-    if(requestedLevel < 1 ||  requestedLevel > 99){
-      // Nothing
-    }else{
+    if( requestedLevel < 1 || requestedLevel > 99 ){
+      // Erroneous values
+    }
+    else{
       Serial.print(F("Changing level to "));
       Serial.print( byte(requestedLevel) );
       Serial.print(F(", from "));
@@ -318,12 +409,6 @@ void receive(const MyMessage &message)
       saveState(sensorID, moistureThresholds[sensorID]);
     }
     
-    // Inform the gateway of the current DimmableLED's SwitchPower1 and LoadLevelStatus value...
-    //send(lightMsg.set(currentLevel > 0));
-
-    // Hek comment: Is this really nessesary?
-    //send( dimmerMsg.set(currentLevel) );
-
   }
 }
 
