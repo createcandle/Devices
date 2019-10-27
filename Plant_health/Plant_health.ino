@@ -9,11 +9,11 @@
  * 
  * SETTINGS */
 
-#define NUMBER_OF_SENSORS 3                         // Sensor count. How many moisture sensors have you connected?
+#define NUMBER_OF_SENSORS 1                         // Sensor count. How many moisture sensors have you connected?
 
 #define HAS_DISPLAY                                 // Has OLED display. Did you attach an OLED display?
 
-#define MEASUREMENT_INTERVAL 7                      // Measurement interval. How many seconds should pass between checking on the plants and sending the data? Don't make this less than 15.
+#define MEASUREMENT_INTERVAL 120                    // Measurement interval. How many seconds should pass between checking on the plants and sending the data? Don't make this less than 15.
 
 //#define MY_REPEATER_FEATURE                       // Act as repeater. Do you want this node to also be act as repeater for other devices?
 
@@ -91,6 +91,7 @@
 #endif
 
 unsigned long lastLoopTime = 0;
+int loopCounter = 0;                                // Counts the loops until the MEASUREMENT_INTERVAL value has been reached. Then new data is sent to the controller.
 boolean send_all_values = true;
 boolean may_transmit = true;
 boolean actually_connected = false;
@@ -101,7 +102,7 @@ byte moistureLevels[6] = {1, 2, 3, 4, 5, 6};
 byte moistureThresholds[6] = {35, 35, 35, 35, 35, 35}; // for each plant we can have a unique moisture level to compare against.
 
 
-#define TRANSMIT_CHILD_ID        100                 // Is the device allowed to transmit data?
+#define TRANSMIT_CHILD_ID        100                // Is the device allowed to transmit data?
 
 
 #ifdef ALLOW_CONNECTING_TO_NETWORK
@@ -112,7 +113,7 @@ byte moistureThresholds[6] = {35, 35, 35, 35, 35, 35}; // for each plant we can 
 
 MyMessage msg(0, V_LEVEL);                          // used to send moisture level data to the gateway. Should be V_LEVEL.
 MyMessage thresholdMsg(1, V_PERCENTAGE);            // used to create a dimmer on the controller that controls the mosture threshold;
-MyMessage relay_msg(TRANSMIT_CHILD_ID, V_STATUS);    // Used to manage the data transission toggle  
+MyMessage relay_msg(TRANSMIT_CHILD_ID, V_STATUS);   // Used to manage the data transission toggle  
 
 
 void presentation()
@@ -190,7 +191,7 @@ void setup()
 #endif 
 
   // Setup pins for input
-  for (int i = 0; i < NUMBER_OF_SENSORS; i++) { //or i <= 5
+  for (int i = 0; i < NUMBER_OF_SENSORS; i++) {
     pinMode(analog_pins[i], INPUT);
     wait(1);
   }
@@ -226,7 +227,7 @@ void send_values()
 {
   send( relay_msg.setSensor(TRANSMIT_CHILD_ID).set(may_transmit) );
   
-  for (byte i=0; i<NUMBER_OF_SENSORS ; i++) {
+  for (byte i=0; i<NUMBER_OF_SENSORS; i++) {
     send( thresholdMsg.setSensor(10 + i).set( moistureThresholds[i] ) );
   }
 }
@@ -254,12 +255,10 @@ void loop()
   // Maximum time that can be scheduled is 4s * 250 loops = 1000 seconds. So the maximum time between sending data can be 16 minutes.
   //
 
-  static byte loopCounter = 0;                      // Counts the loops until the MEASUREMENT_INTERVAL value has been reached. Then new data is sent to the controller.
-  static boolean loopDone = false;                  // used to make sure the 'once every millisecond' things only run once every millisecond (or 2.. sometimes the millis() function skips a millisecond.);
 
   if( millis() - lastLoopTime > LOOPDURATION ){
     lastLoopTime = millis();
-    wdt_reset(); // Reset the watchdog timer
+    wdt_reset();                                    // Reset the watchdog timer
 
       // This is some experimental code to add watering funtionality (actuator). Will be expanded upon later.
       /*
@@ -278,7 +277,7 @@ void loop()
       }
       */
     
-    if(loopCounter < NUMBER_OF_SENSORS){       // During the first few loops the script will send updated data.
+    if(loopCounter < NUMBER_OF_SENSORS){            // During the first few loops the script will send updated data.
         
       int16_t moistureLevel = analogRead(analog_pins[loopCounter]);
       Serial.print(F(" moisture level (pre): "));
@@ -304,7 +303,7 @@ void loop()
       oled.print(loopCounter + 1);
       oled.print(F(" "));
       if( NUMBER_OF_SENSORS < 4 ){
-        oled.set2X();                     // Increase font size if less than 4 sensors are attached.
+        oled.set2X();                               // Increase font size if less than 4 sensors are attached.
       }
       
       oled.print(moistureLevel);
@@ -333,19 +332,19 @@ void loop()
       if( loopCounter == NUMBER_OF_SENSORS ){
         oled.setCursor(85,0);
         if( actually_connected ){
-          oled.print(F("W"));             // Show connection icon on the display
+          oled.print(F("W"));                       // Show connection icon on the display
         }
         else{
-          oled.print(F(" "));             // Hide connection icon on the display
+          oled.print(F(" "));                       // Hide connection icon on the display
         }
       }
 #endif
 
     }
     loopCounter++;
-    if(loopCounter >= MEASUREMENT_INTERVAL){                       // If enough time has passed, the counter is reset, and new data is sent.
+    if(loopCounter >= MEASUREMENT_INTERVAL){        // If enough time has passed, the counter is reset, and new data is sent.
       loopCounter = 0;
-      actually_connected = false;                       // Whether the device is actually succesfully connected to the network.
+      actually_connected = false;                   // Whether the device is actually succesfully connected to the network.
     }
 #ifdef HAS_DISPLAY
     // Show countdown to measurement
@@ -392,13 +391,11 @@ void receive(const MyMessage &message)
     Serial.println( requestedLevel );
 
     // Clip incoming level to valid range of 0 to 100
-    //requestedLevel = requestedLevel > 100 ? 100 : requestedLevel;
-    //requestedLevel = requestedLevel < 0   ? 0   : requestedLevel;
     if(requestedLevel > 100){ requestedLevel = 100;}
     if(requestedLevel < 0){ requestedLevel = 0;}
 
     if( requestedLevel < 1 || requestedLevel > 99 ){
-      // Erroneous values
+      // Erroneous value
     }
     else{
       Serial.print(F("Changing level to "));
