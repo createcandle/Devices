@@ -18,7 +18,7 @@
 
 #define HAS_CO2_SENSOR                              // Have you attached a CO2 sensor?
 
-#define MEASUREMENT_INTERVAL 10                     // How many seconds do you want between each measurement? The minimum is 10 seconds.
+#define MEASUREMENT_INTERVAL 60                     // How many seconds do you want between each measurement? The minimum is 10 seconds.
 
 #define HAS_DISPLAY                                 // Does the sensor have a little OLED display attached?
 
@@ -50,7 +50,7 @@
 #define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors security
-#define MY_ENCRYPTION_SIMPLE_PASSWD "workshop"      // Be aware, the length of the password has an effect on memory use.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
