@@ -2,7 +2,7 @@
  * 
  * This is a CO2 sensor from the Candle project.
  * 
- * You can attach both a canbon monoxide and a carbon dioxide sensor.
+ * You can attach both a carbon monoxide and a carbon dioxide sensor.
  * 
  * Carbon monoxide is a dangerous, poisonous gas which is completely odourless. It is often formed when something is burning, but doesn't burn with enough oxygen.
  * 
