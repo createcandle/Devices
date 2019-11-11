@@ -1,8 +1,10 @@
 /*
 * 
-* The Candle Serial Gateway acts as the bridge between the Candle devices and the Candle Controller. 
+* The Candle receiver acts as the bridge between the Candle devices and the Candle Controller. 
 * 
-* It only allows communication with other Candle devices that use the same encryption password as it uses. When you install the Candle Manger, a random password is generated for you. If you ever want to change the encryption password used by your network, this can be done in the Candle Manager settings. Be warned that you will have to re-create this receiver as well as all your devices, since they will all need to have new code with the new password in it.
+* It only allows communication with other Candle devices that use the same encryption password as it uses itself. 
+* When you install the Candle Manager, a random password is generated for you. If you ever want to change the encryption password used by your network, this can be done in the Candle Manager settings. 
+* Be warned that you will have to re-create this receiver as well as all your devices, since they will all need to have new code with the new password in it.
 * 
 * If you have already installed the MySensors add-on, please temporarily disable it before creating this receiver. Otherwise the MySensors add-on may try to connect to it during the creation process, and thus disrupt it.
 * 
@@ -42,36 +44,46 @@
 //#define MY_RF24_PA_LEVEL RF24_PA_HIGH
 #define MY_RF24_PA_LEVEL RF24_PA_MAX
 
-// Enable serial gateway
-#define MY_GATEWAY_SERIAL
-
-
 // Mysensors advanced security
-#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"        // The Candle Manager add-on will change this into the actual password your network uses.
-//#define MY_SECURITY_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
-//#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7           // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // The Candle Manager add-on will change this into the actual password your network uses.
+//#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
+//#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
 // Mysensors advanced settings
-//#define MY_RF24_CHANNEL 100                         // In EU the default channel 76 overlaps with wifi, so you could try using channel 100. But you will have to set this up on every device, and also on the controller. You can even try 115.
-//#define MY_RF24_DATARATE RF24_250KBPS               // Slower datarate increases the range, but the RF-Nano does not support this slow speed.
-#define MY_RF24_DATARATE RF24_1MBPS                   // This datarate is supported by pretty much all NRF24 radios, including the RF-Nano.
-#define MY_SPLASH_SCREEN_DISABLED                     // Saves a little memory.
+//#define MY_RF24_CHANNEL 100                       // In EU the default channel 76 overlaps with wifi, so you could try using channel 100. But you will have to set this up on every device, and also on the controller. You can even try 115.
+//#define MY_RF24_DATARATE RF24_250KBPS             // Slower datarate increases the range, but the RF-Nano does not support this slow speed.
+#define MY_RF24_DATARATE RF24_1MBPS                 // This datarate is supported by pretty much all NRF24 radios, including the RF-Nano.
+#define MY_SPLASH_SCREEN_DISABLED                   // Saves a little memory.
 
-#include <MySensors.h>
+// Enable serial gateway
+#define MY_GATEWAY_SERIAL                           // This is the main function of this code. It tells the MySensors library to turn this device into a gateway for MySensors network.
+
+#include <MySensors.h>                              // The MySensors library, which takes care of creating the wireless network.
+#include <avr/wdt.h>                                // The watchdog timer - if the device becomes unresponsive and doesn't periodically reset the timer, then it will automatically reset once the timer reaches 0.
+
+// Clock for the watchdog
+#define INTERVAL 1000                               // Every second we reset the watchdog timer. If the device freezes, the watchdog will not re reset, and the device will reboot.
+unsigned long previousMillis = 0;                   // Used to run the internal clock
+
 
 void setup()
 {
-	// Setup locally attached sensors
+  wdt_enable(WDTO_2S);                              // Starts the watchdog timer. If it is not reset at least once every 2 seconds, then the entire device will automatically restart.                                 
 }
+
 
 void presentation()
 {
-	// Present locally attached sensors
+	// The receiver does not have any extra children.
 }
+
 
 void loop()
 {
-	// Send locally attached sensor data here
+  if(millis() - previousMillis >= INTERVAL){        // Main loop, runs every second.
+    previousMillis = millis();                      // Store the current time as the previous measurement start time.
+    wdt_reset();                                    // Reset the watchdog timer
+  }
 }
 
 
