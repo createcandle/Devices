@@ -1,4 +1,4 @@
-/*
+ /*
  *
  * Signal Hub
  * 
@@ -30,9 +30,7 @@
 
 #define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommended.  
 
-#define VERTICALLY_FLIP_TOUCH_SCREEN                // Vertical flip. Select this if you would like to vertically flip the touch screen.  
-
-#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+//#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
  /* END OF SETTINGS
   *  
@@ -78,6 +76,7 @@
   *  - Allow multiple quick succession touch screen events to add play commands to the playlist.
   */
 
+//#define VERTICALLY_FLIP_TOUCH_SCREEN                // Vertical flip. Select this if you would like to vertically flip the touch screen.  
 
 //#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
 //#define DEBUG_SCREEN                              // Do you want to see extra debugging information about the touch screen in the serial output?
@@ -290,8 +289,9 @@ byte bucketCount = 0;                               // How many different types 
 boolean connectedToNetwork = false;                 // Are we connected to the local MySensors network? Used to display the 'w' connection icon.
 byte lengthOfSignalWeAreWaitingFor = 3;             // Used when recording on-off signals. The off-signal should have the same byte length as the on signal.     
 byte brightnessTimer = 0;                           // When this reaches 0 the screen is turned off.
+byte heartbeat_counter = 0;                         // Used to send a heartbeat signal to the controller once every 25 seconds.
 
-#define PLAYLIST_SIZE 6
+#define PLAYLIST_SIZE 6                             // How many commands can be remembered.
 byte playlist[PLAYLIST_SIZE];                       // Sometimes multiple demands to play a signal come in. This holds all the signals we should replay one after the other
 byte playlist_position = 0;                         // Signals that should be replayed are placed in a playlist, so they can be played one after the other of multiple should be played.
 
@@ -782,6 +782,12 @@ void loop()
     if( millis() - lastLoopTime > 100 ){
       lastLoopTime = millis();
 
+      heartbeat_counter++;
+      if(heartbeat_counter > 250){
+        heartbeat_counter = 0;
+        sendHeartbeat();
+      }
+
       // If there is a signal to be played in the playlist, play it.
       if( playlist_position > 0 ){
         Serial.print(F("Playing signal from playlist #")); Serial.println(playlist_position);
@@ -798,7 +804,7 @@ void loop()
 
       // Turn screen off after a while
       if( brightnessTimer > 1){
-        brightnessTimer--;
+        //brightnessTimer--;
         //Serial.println(brightnessTimer);
       }
       else if( brightnessTimer == 1 ){
@@ -1838,27 +1844,31 @@ void replay(byte signalNumber, boolean onOrOff)
       if( j % 32 == 31 ){ Serial.println(); }
     }
 #endif
-
-    // Finally, play the new timing a few times.
-    Serial.println(F("REPLAYING"));
-    for( byte i = 0; i < 8; i++ ){                  // Sending the pattern a few times.
-      boolean high = false;
-      for( int j = 0; j < restoredSignalLength; j++ ){
-        if( high ){
-          digitalWrite(TRANSMITTER, LOW);
-          high = false;
+    for( byte i = 0; i < 3; i++ ){  
+      
+      // Finally, play the new timing a few times.
+      Serial.println(F("REPLAYING"));
+      
+      for( byte i = 0; i < 12; i++ ){                  // Sending the pattern a few times.
+        boolean high = false;
+        for( int j = 0; j < restoredSignalLength; j++ ){
+          if( high ){
+            digitalWrite(TRANSMITTER, LOW);
+            high = false;
+          }
+          else{
+            digitalWrite(TRANSMITTER, HIGH);
+            high = true;
+          }
+          interval = timings[j] * GRANULARITY;
+          delayMicroseconds(interval);
         }
-        else{
-          digitalWrite(TRANSMITTER, HIGH);
-          high = true;
-        }
-        interval = timings[j] * GRANULARITY;
-        delayMicroseconds(interval);
       }
-    }
+  
+      digitalWrite(TRANSMITTER, LOW);                 // Just to be safe
+      wait(400);
 
-    digitalWrite(TRANSMITTER, LOW);                 // Just to be safe
-    wait(300);
+    }
 
 #ifdef DEBUG    
     wait(300);
@@ -2752,7 +2762,6 @@ void clearReceivedBuffer()
 }
 
 #endif // End of touch screen check.
-
 
 
 void receive(const MyMessage &message)
