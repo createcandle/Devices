@@ -30,7 +30,7 @@
 
 #define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommended.  
 
-//#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
  /* END OF SETTINGS
   *  
@@ -413,9 +413,13 @@ const MessageDef MessageTable[] PROGMEM = {
 #define COPYING_SIMPLE_BTN_ID 5                     // Learn to replay a single signal.
 #define COPYING_ON_OFF_BTN_ID 6                     // Learn to replay an ON and an OFF signal that belong together.
 
+#define FIRST_ACTUATOR_CHILD_ID 200                 // On-off child ID's range from 200 to 224
+
+#define FIRST_DETECT_CHILD_ID 225                   // Detect-only child ID's range from 225 to 250
+
 MyMessage textmsg(DEVICE_STATUS_ID, V_TEXT);        // Sets up the message format that we'll be sending to the MySensors gateway later. In this case it's a text variable. The first part is the ID of the specific sensor module on this node. The second part tells the gateway what kind of data to expect.
-MyMessage buttonmsg(LEARN_SIMPLE_BTN_ID, V_STATUS); // The message for replayable signals' buttons. This is an on/off message.
-MyMessage detectmsg(10, V_TRIPPED);                 // The message for detect-only signals. This is an on/off message.
+MyMessage buttonmsg(FIRST_ACTUATOR_CHILD_ID, V_STATUS); // The message for replayable signals' buttons. This is an on/off message.
+MyMessage detectmsg(FIRST_DETECT_CHILD_ID, V_TRIPPED); // The message for detect-only signals. This is an on/off message.
 
 
 static unsigned long lastLoopTime = 0;              // Holds the last time the main loop ran.
@@ -425,12 +429,16 @@ void before()
 {
   Serial.begin(115200);
   Serial.println(F("Hello, I am a Signal Hub."));
+  //presentation();
 }
 
 
 void presentation()
 {
+  //Serial.println(F("PRESENTATION"));
   scanEeprom();                                    // Find out how many signals are stored in memory.
+
+  //Serial.print(F("count: ")); Serial.println(amountOfStoredReplayableSignals);
   
   sendSketchInfo(F("Signal Hub"), F("1.1")); wait(RADIO_DELAY); // Child 0. Sends the sketch version information to the gateway and Controller
   present(DEVICE_STATUS_ID, S_INFO, F("Device status")); wait(RADIO_DELAY); // Child 1. This outputs general status details.
@@ -449,22 +457,24 @@ void presentation()
   strcpy_P(childNameMessage, replayMessage);
   
   // We loop over all the replayable signals, and present them to the controller.
-  for( byte replayableID=10; replayableID < 10 + amountOfStoredReplayableSignals; replayableID++ ){
+  for( byte replayableID=FIRST_ACTUATOR_CHILD_ID; replayableID < FIRST_ACTUATOR_CHILD_ID + amountOfStoredReplayableSignals; replayableID++ ){
+    childNameMessage[7] = (replayableID - FIRST_ACTUATOR_CHILD_ID) + 49; // ASCII character '1' has number 49.
 #ifdef DEBUG
     Serial.print(F("Replayable child ID ")); Serial.println(replayableID);
+    Serial.println(childNameMessage);
 #endif
-    childNameMessage[7] = (replayableID - 10) + 49;
     present(replayableID, S_BINARY, childNameMessage); wait(RADIO_DELAY);
   }
 
   strcpy_P(childNameMessage, detectedMessage);
   
   // We loop over all the detect-only signals, and present them to the controller. 
-  for( byte recognisedID=100; recognisedID < 100 + (amountOfStoredSignals - amountOfStoredReplayableSignals); recognisedID++ ){
+  for( byte recognisedID=FIRST_DETECT_CHILD_ID; recognisedID < FIRST_DETECT_CHILD_ID + (amountOfStoredSignals - amountOfStoredReplayableSignals); recognisedID++ ){
+    childNameMessage[9] = (recognisedID - FIRST_DETECT_CHILD_ID) + 49; // ASCII character '1' has number 49.
 #ifdef DEBUG
     Serial.print(F("Detectable child ID ")); Serial.println(recognisedID);
+    Serial.println(childNameMessage);
 #endif
-    childNameMessage[9] = (recognisedID - 100) + 49; // ASCII character '1' has number 49.
     present(recognisedID, S_DOOR, childNameMessage); wait(RADIO_DELAY);
   }
 
@@ -486,22 +496,22 @@ void send_values(){
 #endif
 
   // We loop over all the replayable signals, and send their values.
-  for( byte replayableID=10; replayableID < 10 + amountOfStoredReplayableSignals; replayableID++ ){
+  for( byte replayableID=FIRST_ACTUATOR_CHILD_ID; replayableID < FIRST_ACTUATOR_CHILD_ID + amountOfStoredReplayableSignals; replayableID++ ){
     //Serial.print(F("replay loadState at presentation: ")); Serial.println(loadState(replayableID));
-    if( loadState(replayableID - 9) > 1 ){
+    if( loadState(replayableID - (FIRST_ACTUATOR_CHILD_ID - 1)) > 1 ){
 #ifdef DEBUG
       Serial.println(F("LoadState had big value, setting to 0."));
 #endif
-      saveState(replayableID - 9, 0);               // The -9 is to offset the ID back the the savestates in the eeprom. So child 10 has savestate 1, etc.
+      saveState(replayableID - (FIRST_ACTUATOR_CHILD_ID - 1), 0);               // The -9 is to offset the ID back the the savestates in the eeprom. So child 10 has savestate 1, etc.
     }
-    boolean saved_toggle_state = loadState(replayableID - 9);
+    boolean saved_toggle_state = loadState(replayableID - (FIRST_ACTUATOR_CHILD_ID - 1));
     send(buttonmsg.setSensor(replayableID).set( saved_toggle_state)); wait(RADIO_DELAY); // Tell the controller in what state the child is.
   }
 
   wait(RADIO_DELAY);
 
   // We loop over all the detect-only signals, and send their values.
-  for( byte recognisedID=100; recognisedID < 100 + (amountOfStoredSignals - amountOfStoredReplayableSignals); recognisedID++ ){
+  for( byte recognisedID=FIRST_DETECT_CHILD_ID; recognisedID < FIRST_DETECT_CHILD_ID + (amountOfStoredSignals - amountOfStoredReplayableSignals); recognisedID++ ){
     send(detectmsg.setSensor(recognisedID).set( 0 )); wait(RADIO_DELAY); // Tell the controller in what state the child is.
   }
 
@@ -791,6 +801,9 @@ void loop()
       // If there is a signal to be played in the playlist, play it.
       if( playlist_position > 0 ){
         Serial.print(F("Playing signal from playlist #")); Serial.println(playlist_position);
+#ifdef DEBUG
+        Serial.print(F("-playlist value: ")); Serial.println(playlist[playlist_position]);
+#endif
         if( playlist[playlist_position] > 100 ){ // Bigger than 100 means it should be turned on.
           replay( playlist[playlist_position] - 100, 1);
         }
@@ -1701,11 +1714,13 @@ void replay(byte signalNumber, boolean onOrOff)
   repeatingPatternLength = 0;
   if( signalNumber == 0 ){ return; }                // We cannot play signal 0. Just a (superfluous) safeguard.
   byte storedSignalLength = scanEeprom();
-  //Serial.print(F("storedSignalLength received from scanEeprom function: ")); Serial.println(storedSignalLength);
+#ifdef DEBUG
+  Serial.print(F("storedSignalLength received from scanEeprom function: ")); Serial.println(storedSignalLength);
+#endif
   if( storedSignalLength && amountOfStoredReplayableSignals > 0 ){
-
+    Serial.println(F("saving and sending"));
     saveState(signalNumber, onOrOff);               // We save the new current toggle state in the eeprom too.
-    send(buttonmsg.setSensor(signalNumber + 9).set(onOrOff)); wait(RADIO_DELAY); // Tell the controller in what state the child is.
+    send(buttonmsg.setSensor(signalNumber + (FIRST_ACTUATOR_CHILD_ID - 1)).set(onOrOff)); wait(RADIO_DELAY); // Tell the controller in what state the child is.
     send(textmsg.setSensor(DEVICE_STATUS_ID).set( F("Playing..") ));
     updateDisplay(REPLAYING);
     for( byte i = 0; i < 8; i++ ){
@@ -1844,12 +1859,12 @@ void replay(byte signalNumber, boolean onOrOff)
       if( j % 32 == 31 ){ Serial.println(); }
     }
 #endif
-    for( byte i = 0; i < 3; i++ ){  
+    for( byte i = 0; i < 2; i++ ){
       
       // Finally, play the new timing a few times.
-      Serial.println(F("REPLAYING"));
+      //Serial.println(F("REPLAYING"));
       
-      for( byte i = 0; i < 12; i++ ){                  // Sending the pattern a few times.
+      for( byte i = 0; i < 24; i++ ){                  // Sending the pattern a few times.
         boolean high = false;
         for( int j = 0; j < restoredSignalLength; j++ ){
           if( high ){
@@ -1866,40 +1881,39 @@ void replay(byte signalNumber, boolean onOrOff)
       }
   
       digitalWrite(TRANSMITTER, LOW);                 // Just to be safe
-      wait(400);
+      wait(1000);
 
-    }
+    
 
 #ifdef DEBUG    
-    wait(300);
-    Serial.println(F("NOW REPLAYING REVERSED"));
+      wait(300);
+      Serial.println(F("NOW REPLAYING REVERSED"));
 #endif
 
 #ifdef DEBUG  
-    for( byte i = 0; i < 8; i++ ){                  // Sending the pattern a few times.
-      boolean high = false;
-      for( int j = 0; j < restoredSignalLength; j++ ){
-        if( high ){
-          digitalWrite(TRANSMITTER, HIGH);
-          high = false;
+      for( byte i = 0; i < 8; i++ ){                  // Sending the pattern a few times.
+        boolean high = false;
+        for( int j = 0; j < restoredSignalLength; j++ ){
+          if( high ){
+            digitalWrite(TRANSMITTER, HIGH);
+            high = false;
+          }
+          else{
+            digitalWrite(TRANSMITTER, LOW);
+            high = true;
+          }
+          interval = timings[j] * GRANULARITY;
+          delayMicroseconds(interval);
         }
-        else{
-          digitalWrite(TRANSMITTER, LOW);
-          high = true;
-        }
-        interval = timings[j] * GRANULARITY;
-        delayMicroseconds(interval);
       }
-    }
-
-    digitalWrite(TRANSMITTER, LOW);                 // Just to be safe
 #endif
-   
+    }
+    digitalWrite(TRANSMITTER, LOW);                 // Just to be safe
 #ifdef DEBUG    
     wait(100);
     Serial.println(F("DONE REPLAYING"));
 #endif
-  }                                                 // End of check if at least one replayable signal is stored in the EEPROM.
+  }                                                // End of check if at least one replayable signal is stored in the EEPROM.
 #if KEYPAD_BUTTON_COUNT > 0
   else{
     //Serial.println(F("No signal to replay stored yet!"));
@@ -2798,17 +2812,18 @@ void receive(const MyMessage &message)
     else 
 #endif
 
-    if( message.sensor >= 10  && message.sensor < 100 ){ // If the user toggled a signal replay button.
+    if( message.sensor >= FIRST_ACTUATOR_CHILD_ID  && message.sensor < FIRST_DETECT_CHILD_ID ){ // If the user toggled a signal replay button.
       if( playlist_position < PLAYLIST_SIZE){       // We only add to the playlist if there is space left in the playlist.
         
         Serial.println(F("-Adding to playlist"));
         playlist_position++;
         if( message.getBool() == 0 ){
-          playlist[playlist_position] = (message.sensor - 9);
+          playlist[playlist_position] = (message.sensor - (FIRST_ACTUATOR_CHILD_ID - 1)); 
         }
         else {
-          playlist[playlist_position] = (message.sensor - 9) + 100;
+          playlist[playlist_position] = (message.sensor - (FIRST_ACTUATOR_CHILD_ID - 1)) + 100; // The number stored in the playlast indicates both the ID of the signal in eeprom, as well as if it should be on (ID + 100) or off (ID only).
         }
+        //send(buttonmsg.setSensor(message.sensor).set( message.getBool() ));
         //replay(message.sensor - 9, message.getBool()); // The old way of directly starting a replay. Now it uses a playlist.
       }
     }
