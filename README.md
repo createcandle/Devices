@@ -37,6 +37,32 @@ It has an optional TFT screen on which it displays:
 - Weather predition icon
 
 
+### Energy use meter
+
+This devices detects light pulses from your electricity meter, and uses this to determine how much power your home uses. It allows you to see watts your home is using at the moment, as well as see longer trends as Kwh in the last hours and/or days.
+
+If you attach a touch screen you can get simple bar graphs and see live data about the power your home is using.
+
+
+### Smart alarm clock
+
+This alarm clock uses a radar sensor to detect when you move in your sleep, and will try to wake you when you're already at a light sleep point in your sleep cycle. If you set it to wake you at 8am, it will start looking for an opportune moment from 7:30.
+
+It can wake you up slowly with its own LED, but the intended use is to one by one switch on other lights in the room. If all else fails, it can sound a classic buzzer.
+
+
+### Plant health sensor
+
+Measure the moisture level of up to 5 plants. You can also set the minimal moisture level that each plant requires. When this level is reached, a "thirsty" switch (each plant has one) will be toggled. You can then create your own automatations to handle this, such as notifying you, or even watering them automatically.
+
+The code already has some hidden functionality to toggle 5 relays directly.
+
+
+### Anemone
+
+This device allows you to control your internet connection. It is designed to disconnect the internet cable going into your router (although you could also limit connectivity to a specific device).
+
+Candle doesn't require an internet connection to work, and this device enforces that idea. It's a device that producers of cloud dependent smart devices could and would never produce.
 
 
 ### Signal Hub
