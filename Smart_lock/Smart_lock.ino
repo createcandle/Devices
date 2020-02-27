@@ -1,20 +1,19 @@
  /*
  * DESCRIPTION
  * 
- * This device can toggle two relays. These relays can be controlled via the Candle Controller, but also via SMS.
- * The SMS function is password protected: you have to send a password to switch the relay.
+ * This device can toggle two relays, and thus two electric locks. These relays can be controlled via the Candle Controller, but also via SMS (if you want).
+ * The SMS function is password protected: you have to send a password to switch the relay. Access can also be limited to only certain mobile phone numbers.
  * 
- * If you send an SMS without the password, it will be shown as the Incoming SMS. This way you can get some insight, and use this to automate other things in your home. For example, you could create a rule that when the system receices an SMS with "purifier on" in it, the air purifier will turn on.
+ * If you send an SMS without the password, it will be shown as the Incoming SMS. Thiscan be used to automate other things in your home. For example, you could create a rule that when the system receices an SMS with "purifier on" in it, the air purifier will turn on.
  * 
  * This way you can control smart devices in your home even if it/Candle is not connected to the internet.
  * 
  * SETTINGS */ 
-//#define HAS_BUTTONS                               // Have you attached buttons? You can toggle the state of the lock with a push button if you want. If you want this, even if you only want to toggle one door, you have to attach two buttons, one for each door.
 
 // It's important to change these to your own phone number(s). When the device starts up it will always start with these values.
 // You will also be able to change this via your controller later, but in case no connection to the controller can be established it's a good idea to enter your phonenumber here.
-char phone1[15] = "310612345678";                   // Phone number of user #1. This is the main number to which status updates will be sent.
-char phone2[15] = "310612345678";                   // Phone number of user #2 (optional). If there is no second user, set it the same number as user #1.
+char phone1[15] = "612345678";                      // Phone number of user #1. This is the main number to which status updates will be sent.
+char phone2[15] = "612345678";                      // Phone number of user #2 (optional). If there is no second user, set it the same number as user #1.
 
 char rotatingPassword1[26] = "door1";               // Door 1 password. If the device is powered up and can't reconnect to the home network, then this will be the fallback password. Maximum length is 25 characters.
 #define DOOR1_SELF_LOCKING                          // Self locking? Should door number one automatically re-lock itself after a short amount of time?
@@ -23,55 +22,40 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 
 #define SELF_LOCKING_DELAY 5                        // Self locking delay. If a door is self-locking, how many seconds before it should re-lock?
 
+#define HAS_BUTTONS                                 // Have you attached buttons? You can toggle the state of each lock with a push button if you want. If you want this feature, even if you only want it for one, you have to attach two buttons, one for each door.
 
-#define APN_URL "data.lycamobile.nl"                // The APN URL from your mobile provider.
-#define APN_USERNAME "lmnl"                         // The APN username from your mobile provider.
-#define APN_PASSWORD "plus"                         // The APN password from your moble provider.
-#define CUSD_COMMAND "*102#"                        // Extra command. This is optional. For example, you can send a code to your provider asking what your prepaid balance is, or asking what your phone number is.
+/*
+ * LYCAMOBILE
+ * APN: data.lycamobile.nl
+ * Username: lmnl
+ * Password: plus
+ * CUSD command to get phone number: *102#
+ * 
+ * LEBARA
+ * APN: internet
+ * No username or password are required, so they can be empty.
+ */
+#define APN_URL "internet"                // The APN URL from your mobile provider.
+#define APN_USERNAME ""                         // The APN username from your mobile provider.
+#define APN_PASSWORD ""                         // The APN password from your moble provider.
 
-//#define SEND_SMS_EVERY_49_DAYS                      // Send SMS every 49 days. If you are using a prepaid simcard, you may have to send an SMS once in a while to stop your simcard from getting disabled. This function tries sending an SMS to you once every 49 days.
+//#define SEND_SMS_EVERY_49_DAYS                    // Send SMS every 49 days. If you are using a prepaid simcard, you may have to send an SMS once in a while to stop your simcard from getting disabled. This function tries sending an SMS to you once every 49 days.
 
-#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+#define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the network? For privacy or security reasons you may prefer a stand-alone device. If you do allow the device to connect, you can connect a button to switch the transmission of data or off.
+
+#define RF_NANO                                   // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
 
 /* END OF SETTINGS
  *  
  *  
- *  
- * _Possible improvements_
- * - for increased safety you could limit which phonenumbers are even allowed to send commands. This could also be a comma-separated text value on the controller.
- * - currently both relays share the password, and the second relay just has a '2' added to the password. This could easily be separated out. // Is this still true?
- * - Allow only one button to be attached, despite having two locks.
- * - Store password in eeprom? Less secure, but could make it more useable.
  * 
- * 
- * Lots of useful commands: https://github.com/stephaneAG/SIM800L/blob/master/README.md
- * 
- * Usefel A6 GSM modem page: http://makerangst.com/a6-gsm-gprs-module-send-an-sms
- *  
- *  
- *  TO DO:
- *  - deal with
- *  
- *  MODEM SAYS: AT
- *
- * MODEM SAYS: AT
- *
- * MODEM SAYS: AT
- *
- * MODEM SAYS: AT&F
- *
- * MODEM SAYS: 
- * 
- * MODEM SAYS: COMMAND NO RESPONSE!
- * 
- * --> reset?
  *  
 */
 
 //#define DEBUG                                       // Display debug information in the serial output.
-//#define MY_DEBUG                                    // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
-
+//#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
+//#define JESSE                                       // Enables the special features for Jesse Howard's Candle prototypes.
 
 
 // Enable and select the attached radio type
@@ -88,9 +72,9 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 
 // Mysensors security
 //#define DEBUG_SIGNING
-#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
-//#define MY_SECURITY_SIMPLE_PASSWD "changeme"        // Be aware, the length of the password has an effect on memory use.
-//#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7           // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
+//#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
+//#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
 // Mysensors advanced settings
 #define MY_TRANSPORT_WAIT_READY_MS 10000            // Try connecting for 10 seconds. Otherwise just continue.
@@ -105,7 +89,7 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 
 
 // MySensors devices form a mesh network by passing along messages for each other. Do you want this node to also be a repeater?
-//#define MY_REPEATER_FEATURE                       // Add or remove the two slashes at the beginning of this line to select if you want this sensor to act as a repeater for other sensors. If this node is on battery power, you probably shouldn't enable this.
+#define MY_REPEATER_FEATURE                         // Add or remove the two slashes at the beginning of this line to select if you want this sensor to act as a repeater for other sensors. If this node is on battery power, you probably shouldn't enable this.
 
 // Define Node ID
 //#define MY_NODE_ID 15
@@ -118,8 +102,18 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 #define GSM_TRANSMIT_PIN 4                          // Connect to U_RXD on the GSM module
 #define RELAY1_PIN 5                                // Relay 1 pin number (use this on a door that needs a short pulse to open).
 #define RELAY2_PIN 6                                // Relay 2 pin number (use this on a door that can be set to locked or unlocked mode, for example with a solenoid.).
-#define BUTTON1_PIN A0                              // Manual button for door 1. Also known as A0
-#define BUTTON2_PIN A1                              // Manual button for door 2. Also known as A1
+
+
+#ifdef JESSE    // For the Candle prototype by Jesse Howard
+#define TOGGLE_FAKE_DATA_PIN A3
+#define TOP_MOTOR_SWITCH_PIN A1
+#define BOTTOM_MOTOR_SWITCH_PIN A2
+#define MOTOR_FORWARD_PIN 7
+#define MOTOR_BACKWARD_PIN 8
+#else
+#define BUTTON1_PIN A0                              // Manual momentary button for door 1.
+#define BUTTON2_PIN A1                              // Manual momentary button for door 2.
+#endif
 
 #ifdef RF_NANO
 // If you are using an RF-Nano, you have to switch CE and CS pins.
@@ -129,12 +123,12 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 
 
 // Allow the smart lock to send you an SMS once every 49 days? It's better to let your controller trigger this, but it's a nice option to have.
-// #define SEND_SMS_EVERY_49_DAYS                   //  This can help keep the simcard 'alive'. The first sms will be sent a week after the smart lock powers on.
+// #define SEND_SMS_EVERY_49_DAYS                   // This can help keep the simcard 'alive'. The first sms will be sent a week after the smart lock powers on.
 
 // THESE VALUES CAN BE CHANGED
 
-#define LOOPDURATION 4000                           // The main loop runs every x milliseconds. This main loop starts the modem, and from then on periodically requests the password.
-#define LOOPSBETWEENPASSWORDREQUESTS 45             // 45 * 4seconds = 3 minutes. So every 3 minute the node asks if the password is still the same.
+#define LOOP_DURATION 1000                          // The main loop runs every x milliseconds. This main loop starts the modem, and from then on periodically requests the password.
+#define SECONDS_BETWEEN_HEARTBEAT_TRANSMISSION 240  // The smart lock might not send any data for a very long time if it isn't used. Sending a heartbeat tells the controller: I'm still there.
 #define MAXIMUMTIMEOUTS 30                          // How often the network may fail before we conclude there is a connection problem.
 
 #define LOCKED 1                                    // This makes it easier to understand what the code is doing. It allows the code to say "LOCKED" instead of "1".
@@ -152,47 +146,166 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 #include <EEPROM.h>                                 // Allows for storing data on the Arduino itself, like a mini hard-drive.
 
 // Software serial
-#define _SS_MAX_RX_BUFF 256                         // The size of the software serial buffer
-#define SERIAL_LINE_LENGTH 48                       // The maximum length that a line from the GSM modem can be.
-#include <SoftwareSerial.h>                         // A software library for serial communication. In this case we use it so talk to the SIM800L GSM modem.
-SoftwareSerial softSerial1(GSM_RECEIVE_PIN,GSM_TRANSMIT_PIN); // Receive pin (RX), transmit pin (TX)
-char serialLine[SERIAL_LINE_LENGTH];                // Holds the line received from the modem.
+#define _SS_MAX_RX_BUFF 255                         // The size of the software serial buffer
+#define SERIAL_LINE_LENGTH 128                      // The maximum length that a line from the GSM modem can be.
+//#define _SS_MAX_RX_BUFF 255
+//#include <SoftwareSerial.h>                       // A software library for serial communication. In this case we use it to talk to the GSM modem. Currently not used because of a strange issue.
+//SoftwareSerial modem(GSM_RECEIVE_PIN,GSM_TRANSMIT_PIN); // Receive pin (RX), transmit pin (TX)
+
+
+
+
+//
+//  The entire software serial library is now meshed into this code. This is because there was a strange issue where the incoming buffer length could not be changed.
+//
+#ifndef CandleSoftwareSerial_h
+#define CandleSoftwareSerial_h
+
+#include <inttypes.h>
+#include <Stream.h>
+
+#ifndef _SS_MAX_RX_BUFF
+#define _SS_MAX_RX_BUFF 200 // RX buffer size
+#endif
+
+#ifndef GCC_VERSION
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#endif
+
+
+class CandleSoftwareSerial : public Stream
+{
+private:
+  // per object data
+  uint8_t _receivePin;
+  uint8_t _receiveBitMask;
+  volatile uint8_t *_receivePortRegister;
+  uint8_t _transmitBitMask;
+  volatile uint8_t *_transmitPortRegister;
+  volatile uint8_t *_pcint_maskreg;
+  uint8_t _pcint_maskvalue;
+
+  // Expressed as 4-cycle delays (must never be 0!)
+  uint16_t _rx_delay_centering;
+  uint16_t _rx_delay_intrabit;
+  uint16_t _rx_delay_stopbit;
+  uint16_t _tx_delay;
+
+  uint16_t _buffer_overflow:1;
+  uint16_t _inverse_logic:1;
+
+  // static data
+  static uint8_t _receive_buffer[_SS_MAX_RX_BUFF]; 
+  static volatile uint8_t _receive_buffer_tail;
+  static volatile uint8_t _receive_buffer_head;
+  static CandleSoftwareSerial *active_object;
+
+  // private methods
+  inline void recv() __attribute__((__always_inline__));
+  uint8_t rx_pin_read();
+  void setTX(uint8_t transmitPin);
+  void setRX(uint8_t receivePin);
+  inline void setRxIntMsk(bool enable) __attribute__((__always_inline__));
+
+  // Return num - sub, or 1 if the result would be < 1
+  static uint16_t subtract_cap(uint16_t num, uint16_t sub);
+
+  // private static method for timing
+  static inline void tunedDelay(uint16_t delay);
+
+public:
+  // public methods
+  CandleSoftwareSerial(uint8_t receivePin, uint8_t transmitPin, bool inverse_logic = false);
+  ~CandleSoftwareSerial();
+  void begin(long speed);
+  bool listen();
+  void end();
+  bool isListening() { return this == active_object; }
+  bool stopListening();
+  bool overflow() { bool ret = _buffer_overflow; if (ret) _buffer_overflow = false; return ret; }
+  int peek();
+
+  virtual size_t write(uint8_t byte);
+  virtual int read();
+  virtual int available();
+  operator bool() { return true; }
+  
+  using Print::write;
+
+  // public only for easy access by interrupt handlers
+  static inline void handle_interrupt() __attribute__((__always_inline__));
+};
+
+#endif // candleserial.h
+
+
+CandleSoftwareSerial modem(GSM_RECEIVE_PIN,GSM_TRANSMIT_PIN); // Receive pin (RX), transmit pin (TX)
+
+
+char serial_line[SERIAL_LINE_LENGTH];                // Holds the line received from the modem.
 
 // MySensors children
 #define DEVICE_STATUS_ID 0                          // The first 'child' of this device is a text field that contains status updates.
 #define SMS_CHILD_ID 1                              // This field is used to tell the controller what text was in the sms. Useful for automation of other things that you want to trigger using an SMS.
-#define SENDSMS_CHILD_ID 2                          // If this button is pressed at the controller, a test sms will be sent. Useful to keep a simcard alive (must send at least one SMS every X months usually).
+#define SENDSMS_CHILD_ID 2                          // If this string is modified at the controller, a test sms will be sent. Useful to keep a simcard alive (must send at least one SMS every X months usually).
 #define BUTTON_CHILD_ID 3                           // Set button ID number on this node.
+#define TRANSMISSION_STATE_CHILD_ID 4               // The child ID of the data transmission switch.
+#define SMS_CONTROL_ID 5                            // Toggle whether SMS is allowed to control the lock.
 
-#define RELAY1_CHILD_ID 10                          // Set switch ID number on this node.
-#define RELAY2_CHILD_ID 11                          // Set switch ID number on this node.
+#define ROTATING_PASSWORD1_ID 10                    // Set password ID number on this node that can be set from outside.
+#define ROTATING_PASSWORD2_ID 36                    // Set password ID number on this node that can be set from outside.
+#define PHONENUMBER1_ID 120                         // If (part of) a phonenumber is given, only phonenumbers that have that part will be allowed to open the lock. E.g. "+31" only allows Dutch numbers. "+3161482375" would only allow that one number.
+#define PHONENUMBER2_ID 135                         // If (part of) a phonenumber is given, only phonenumbers that have that part will be allowed to open the lock. E.g. "+31" only allows Dutch numbers. "+3161482375" would only allow that one number.
 
-#define ROTATING_PASSWORD1_ID 20                    // Set password ID number on this node that can be set from outside.
-#define ROTATING_PASSWORD2_ID 21                    // Set password ID number on this node that can be set from outside.
+#define RELAY1_CHILD_ID 210                         // Set switch ID number on this node. Door 1.
+#define RELAY2_CHILD_ID 211                         // Set switch ID number on this node. Door 2. This needs to be 1 higher than relay 1.
 
-#define PHONENUMBER1_ID 30                          // If (part of) a phonenumber is given, only phonenumbers that have that part will be allowed to open the lock. E.g. "+31" only allows Dutch numbers. "+3161482375" would only allow that one number.
-#define PHONENUMBER2_ID 31                          // If (part of) a phonenumber is given, only phonenumbers that have that part will be allowed to open the lock. E.g. "+31" only allows Dutch numbers. "+3161482375" would only allow that one number.
+MyMessage text_message(DEVICE_STATUS_ID, V_TEXT);   // Sets up the message format that we'll be sending to the MySensors gateway later. The first part is the ID of the specific sensor module on this node. The second part tells the gateway what kind of data to expect.
+MyMessage relay_message(TRANSMISSION_STATE_CHILD_ID, V_STATUS); // A generic boolean state message.
+MyMessage lock_message(RELAY1_CHILD_ID, V_LOCK_STATUS); // A message to send the state of locks.
 
-MyMessage charmsg(DEVICE_STATUS_ID, V_TEXT);        // Sets up the message format that we'll be sending to the MySensors gateway later. The first part is the ID of the specific sensor module on this node. The second part tells the gateway what kind of data to expect.
-MyMessage relaymsg(RELAY1_CHILD_ID, V_LOCK_STATUS); // EXPERIMENT, try V_TRIPPED or V_STATUS or V_LOCK_STATUS  // is used by the relays and the toggle to send their status to Domoticz.
 
 // General variables
 #define DOOR_COUNT 2                                // How many electric locks are attached.
-#define RF_DELAY 100                                // Milliseconds delay betweeen radio signals. This gives the radio some breathing room.
-byte timeOutCount = 0;                              // How often did we fail to the password after we requested it? If it's too often, then the connection is down.
+#define RADIO_DELAY 100                             // Milliseconds delay betweeen radio signals. This gives the radio some breathing room.
+//byte timeOutCount = 0;                              // How often did we fail to the password after we requested it? If it's too often, then the connection is down.
 boolean incomingSMS = 0;                            // Used in flow control when processing an SMS.
 boolean waitingForResponse = false;                 // Used to check if the connection to the controller is ok. If we are still waiting by the next time a password is requested, something is fishy.
 boolean send_all_values = 1;
 boolean processing_line = 0;
 
-boolean desiredDoorStates[DOOR_COUNT];              // An array that holds the desired door states. These are turned into:
+boolean desired_door_states[DOOR_COUNT];            // An array that holds the desired door states. These are turned into:
 boolean actualDoorStates[DOOR_COUNT];               // An array that holds the actual door states.
 
 const char unlockedMessage[] PROGMEM = { "  unlocked" }; // This construction saves some memory. Only the first character has to be changed to create a message to send via SMS, such as "1 locked" or "2 unlocked".s
 const char lockedMessage[] PROGMEM = { "  locked" }; // This construction saves some memory.
 const char passwordMessage[] PROGMEM = { "Door   password" }; // This construction saves some memory.
 
-#define WORK_STRING_SIZE 16                         // Length of an array that holds various strings.
+#define WORK_STRING_SIZE 26                         // Length of an array that holds various strings.
+char work_string[WORK_STRING_SIZE];                 // Creates an array that will hold various strings.
+
+
+// MODEM STATES
+#define MODEM_BUFFER_EMPTY 0                        // These three states are used to avoid sending the modem commands while it's still sending them to the Arduino.
+#define WAITING_FOR_RESPONSE_FROM_MODEM 1
+#define MODEM_PROCESSING_RESPONSE 2
+
+
+
+byte modem_state = MODEM_BUFFER_EMPTY;
+boolean modem_booted = false;
+
+
+// DATA TRANSMISSION TOGGLE
+boolean transmission_state = true;
+boolean desired_transmission_state = true;
+
+boolean sms_control_state = true;
+boolean desired_sms_control_state = true;
+
+boolean store_to_eeprom = false;
+boolean send_sms = false;
+
 
 // A small funtion that can tell you how much ram is left.
 int freeRam () {
@@ -203,47 +316,28 @@ int freeRam () {
 // via https://playground.arduino.cc/Code/AvailableMemory
 
 
-// Function to send an SMS to the main phone number.
-void sendSMS(char smsToSend[26])
-{
-  //Serial.print(F("ABOUT TO SEND: ")); Serial.println(smsToSend);
-  if(sizeof(phone1) > 9){                           // Check if we have received a real phone number to send the SMS to.
-    Serial.println(F("Sending sms"));
-    softSerial1.print(F("AT+CMGS=\""));
-    softSerial1.print(phone1);                      
-    softSerial1.print(F("\"\r"));
-    wait(100);
-    softSerial1.print(smsToSend);
-    softSerial1.write(0x1A);
-    //send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("Sent an SMS"))); wait(RF_DELAY);  
-  }
-  else {
-    Serial.println(F("Cannot send SMS: no phone number set"));
-    send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("No phone number set yet!"))); wait(RF_DELAY);
-  }
-}
+
 
 
 // The before function is run very early on. This makes it great for quickly changing pin settings.
 void before()
 {
+  Serial.begin(115200);
+  Serial.println(F("Hello world, I am a door lock."));
 
-  memset(desiredDoorStates,0,sizeof(desiredDoorStates));
+  memset(desired_door_states,0,sizeof(desired_door_states));
   memset(actualDoorStates,0,sizeof(actualDoorStates));
-
-  pinMode(BUTTON1_PIN, INPUT_PULLUP);
-  pinMode(BUTTON2_PIN, INPUT_PULLUP);
 
   for( byte checkingDoor = 0; checkingDoor < DOOR_COUNT; checkingDoor++ ){
     //Serial.print(F("BUTTON1_PIN + checkingDoor = ")); Serial.println(BUTTON1_PIN + checkingDoor);
     pinMode(RELAY1_PIN + checkingDoor, OUTPUT);     // Set all relay pins to be output.
      // Set the button pins as input.
-    //pinMode(BUTTON1_PIN + checkingDoor, INPUT); // Set the button pins as input.
-    char possibleDesiredState = EEPROM.read(EEPROM_STORAGE_START + checkingDoor);
+    //pinMode(BUTTON1_PIN + checkingDoor, INPUT);   // Set the button pins as input.
+    byte possibleDesiredState = EEPROM.read(EEPROM_STORAGE_START + RELAY1_CHILD_ID + checkingDoor);
     
     if( possibleDesiredState == 0 || possibleDesiredState == 1 ){ // If the eeprom has the number '255' here, then it clearly hasn't been set to hold a desired value before, and we should not use it.
       //Serial.println("Found useable state in eeprom");
-      desiredDoorStates[checkingDoor] = (boolean) possibleDesiredState;
+      desired_door_states[checkingDoor] = possibleDesiredState;
       
       if( possibleDesiredState == LOCKED){          // This may seem complicated. The numerical state that represents 'locked' in the interface could be different from what the relay conciders locked. For example, 1 could be locked in the interface, but unlocked for the relay. And vice-versa. This construction deals with that possibility.
         digitalWrite(RELAY1_PIN + checkingDoor, RELAY_LOCKED);
@@ -251,104 +345,170 @@ void before()
       if( possibleDesiredState == UNLOCKED){
         digitalWrite(RELAY1_PIN + checkingDoor, RELAY_UNLOCKED);
       }
-      
-      actualDoorStates[checkingDoor] = desiredDoorStates[checkingDoor];
-
+      actualDoorStates[checkingDoor] = desired_door_states[checkingDoor];
     }
     else {
 #ifdef DEBUG
-      Serial.println("No useable state found in eeprom");
+      Serial.println(F("No useable state found in eeprom"));
 #endif
       digitalWrite(RELAY1_PIN + checkingDoor, RELAY_UNLOCKED); // If no value was stored in the eeprom, start unlocked, for safety.
     }
   }
+
+
+  if( EEPROM.read(EEPROM_STORAGE_START + 255) == 1 ){ // This position indicates whether any passwords and phone numbers have been stored in eeprom.
+    Serial.println(F("Loading phone numbers and passwords from internal memory"));
+    loadEverythingFromEeprom();
+  }
+  else{
+    Serial.println(F("No preferences stored in internal memory yet"));
+  }
+
+
+  
   //digitalWrite(LED_PIN, HIGH);  
 }
 
-
+#ifdef ALLOW_CONNECTING_TO_NETWORK
 void presentation()
 {
-  sendSketchInfo(F("Smart lock"), F("1.7")); wait(RF_DELAY);
+  sendSketchInfo(F("Smart lock"), F("1.7")); wait(RADIO_DELAY);
 
-  present(DEVICE_STATUS_ID, S_INFO, F("Status")); wait(RF_DELAY);
-  present(SMS_CHILD_ID, S_INFO, F("Received SMS")); wait(RF_DELAY);
-  present(SENDSMS_CHILD_ID, S_INFO, F("Change to send SMS")); wait(RF_DELAY);
-  present(PHONENUMBER1_ID, S_INFO, F("Phone number 1")); wait(RF_DELAY);
-  present(PHONENUMBER2_ID, S_INFO, F("Phone number 2")); wait(RF_DELAY);
+  present(DEVICE_STATUS_ID, S_INFO, F("Status")); wait(RADIO_DELAY);
+  present(SMS_CHILD_ID, S_INFO, F("Received SMS")); wait(RADIO_DELAY);
+  present(SENDSMS_CHILD_ID, S_INFO, F("Send SMS")); wait(RADIO_DELAY);
+  present(PHONENUMBER1_ID, S_INFO, F("Phone number 1")); wait(RADIO_DELAY);
+  present(PHONENUMBER2_ID, S_INFO, F("Phone number 2")); wait(RADIO_DELAY);
 
-  // Presenting the password fields
-  char workString[WORK_STRING_SIZE];                // Creates an array that will hold various strings.
-
+  // Presenting the password fields. This is currently over coplicated, but was an experiment in making the code more flexible so it could handle a lot of locks.
+  
   for( byte i = 0; i < DOOR_COUNT; i++ ){           // We loop over all the doorlocks in the system, and check if they are in the right position.
-    memset(workString,0,sizeof(workString));
-    strcpy_P(workString, passwordMessage);            // This copies the password message that we stored in progmem (flash memory) into real memory.
+    memset(work_string,0,sizeof(work_string));
+    strcpy_P(work_string, passwordMessage);          // This copies the password message that we stored in progmem (flash memory) into real memory.
     
-    workString[5] = i + 49;                         // This will create "Door 1 password", "Door 2 password", etc. In that string the number is the 5th character (starting form 0). Ascii character 49 = "1', character 50 = "2", etc.
-    //Serial.println(workString);
-    present(ROTATING_PASSWORD1_ID + i, S_INFO, workString); wait(RF_DELAY);
+    work_string[5] = i + 49;                         // This will create "Door 1 password", "Door 2 password", etc. In that string the number is the 5th character (starting form 0). Ascii character 49 = "1", character 50 = "2", etc.
+    //Serial.println(work_string);
+    present(ROTATING_PASSWORD1_ID + (i*26), S_INFO, work_string); wait(RADIO_DELAY);
     
-    workString[6] = '\0'; // Shortens the string to just be "Door 1", "Door 2", etc.
-    //Serial.println(workString);
-    present(RELAY1_CHILD_ID + i, S_LOCK, workString, true); wait(RF_DELAY);
+    work_string[6] = '\0'; // Shortens the string to just be "Door 1", "Door 2", etc.
+    //Serial.println(work_string);
+    present(RELAY1_CHILD_ID + i, S_LOCK, work_string, true); wait(RADIO_DELAY);
   }
 
-  send_all_values = 1;                              // Whenever a new presentation is requested, we should also send the current values of the children.
+  present(TRANSMISSION_STATE_CHILD_ID, S_BINARY, F("Data transmission")); wait(RADIO_DELAY);
+  present(SMS_CONTROL_ID, S_BINARY, F("Mobile control")); wait(RADIO_DELAY);
+
+  send_all_values = true;                           // Whenever a new presentation is requested, we should also send the current values of the children.
 }
+
 
 void send_values()
 {
 #ifdef DEBUG
   Serial.println(F("Sending button states"));
 #endif
-  send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("Hello")),1); wait(RF_DELAY);  
-  send(charmsg.setSensor(SMS_CHILD_ID).set( F("")),1); wait(RF_DELAY);
-  send(charmsg.setSensor(SENDSMS_CHILD_ID).set( F("Change me to send SMS")),1); wait(RF_DELAY);
-  send(charmsg.setSensor(PHONENUMBER1_ID).set( phone1 ),1); wait(RF_DELAY);
-  send(charmsg.setSensor(PHONENUMBER2_ID).set( phone2 ),1); wait(RF_DELAY);
+  send(text_message.setSensor(DEVICE_STATUS_ID).set( F("OK")),1); wait(RADIO_DELAY);  
+  send(text_message.setSensor(SMS_CHILD_ID).set( F(""))); wait(RADIO_DELAY);
+  send(text_message.setSensor(SENDSMS_CHILD_ID).set( F("Change me to send SMS"))); wait(RADIO_DELAY);
+  send(text_message.setSensor(PHONENUMBER1_ID).set( phone1 ),1); wait(RADIO_DELAY);
+  send(text_message.setSensor(PHONENUMBER2_ID).set( phone2 ),1); wait(RADIO_DELAY);
 
-  for( byte i = 0; i < DOOR_COUNT; i++ ){
-    send(charmsg.setSensor(ROTATING_PASSWORD1_ID + i).set( F("change_me") )); wait(RF_DELAY);
-    send(relaymsg.setSensor(RELAY1_CHILD_ID + i).set( actualDoorStates[i] )); wait(RF_DELAY);
+#ifdef DEBUG
+  Serial.print(F("Sending phone1: ")); Serial.println( phone1 );
+#endif
+
+  //for( byte i = 0; i < DOOR_COUNT; i++ ){
+    //send(text_message.setSensor(ROTATING_PASSWORD1_ID + i).set( F("change_me") )); wait(RADIO_DELAY);
+  //}
+  send(text_message.setSensor(ROTATING_PASSWORD1_ID).set( rotatingPassword1 )); wait(RADIO_DELAY);
+  send(text_message.setSensor(ROTATING_PASSWORD2_ID).set( rotatingPassword2 )); wait(RADIO_DELAY);
+
+  send(relay_message.setSensor(TRANSMISSION_STATE_CHILD_ID).set(transmission_state),1);
+  send(relay_message.setSensor(SMS_CONTROL_ID).set(sms_control_state),1);
+
+  if(transmission_state){                           // Send the state of the locks (if data transmission is allowed)
+    for( byte i = 0; i < DOOR_COUNT; i++ ){
+      send(lock_message.setSensor(RELAY1_CHILD_ID + i).set( actualDoorStates[i] )); wait(RADIO_DELAY);
+    }
   }
 }
+#endif // connecting to network
 
 void setup()
 {
   wait(1000);
-  Serial.begin(115200);
-  Serial.println(F("Hello world, I am a SMS door lock."));
+
+#ifndef JESSE
+  pinMode(BUTTON1_PIN, INPUT_PULLUP);
+  pinMode(BUTTON2_PIN, INPUT_PULLUP);
+#endif
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+
+#ifdef JESSE
+  pinMode(MOTOR_FORWARD_PIN, OUTPUT);
+  pinMode(MOTOR_BACKWARD_PIN, OUTPUT);
+  pinMode(TOP_MOTOR_SWITCH_PIN, INPUT_PULLUP);
+  pinMode(BOTTOM_MOTOR_SWITCH_PIN, INPUT_PULLUP);
+  transmission_state = digitalRead(TOP_MOTOR_SWITCH_PIN); // Sets the intial state of the motorized toggle switch.
+#else
+  transmission_state = loadState(TRANSMISSION_STATE_CHILD_ID);
+#endif
+  Serial.print(F("Initial transmission state: ")); Serial.println(transmission_state);
+
   
   // Has a connection to the controller been established?
   if(isTransportReady()){
-    Serial.println(F("Connected to gateway"));    
+    Serial.println(F("Connected to gateway"));
+    send(text_message.setSensor(DEVICE_STATUS_ID).set( F("STARTING GSM"))); wait(RADIO_DELAY); 
   }else{
     Serial.println(F("Not connected to gateway"));
-    timeOutCount = MAXIMUMTIMEOUTS;                 // Start the system in 'no connection' mode, meaning the backup passwords may be used.
+    //timeOutCount = MAXIMUMTIMEOUTS;                 // Start the system in 'no connection' mode, meaning the backup passwords may be used.
   }
-  
+
+#endif // allow connecting to network
+
+
+#ifdef DEBUG
+  for ( int i = EEPROM_STORAGE_START; i < EEPROM_STORAGE_START + 512; i++ ){
+    //char k = EEPROM.read(i);
+    //Serial.print(i); Serial.print(F("=")); Serial.write(k); Serial.print(F(" (")); Serial.println( (byte) k);
+  }
+#endif
+
+
   Serial.println(F("Connecting to GSM.."));
-  softSerial1.begin(57600);                         // The modem automatically adapts to work at the same baud rate when we send a few commands.
-  softSerial1.println(F("AT"));
+  modem.begin(57600);  //57600                      // The modem automatically adapts to work at the same baud rate when we send a few commands.
+  modem.println(F("AT"));
   wait(300);
-  softSerial1.println(F("AT"));
+  modem.println(F("AT"));
   wait(300);
-  softSerial1.println(F("AT"));
+  modem.println(F("AT"));
   wait(300);
   
-  softSerial1.println(F("AT&F"));                   // Reset the GSM modem.
-  wait(15000);                                      // The GSM modem needs some time to settle.
+  modem.println(F("AT&F"));                         // Reset the GSM modem.
+  wait(15000);                                      // After a reset, the GSM modem needs some time to settle.
+
+  while( modem.available() > 0 ){                   // Empty the buffer before we start the actual bootup procedure
+    modem.read();
+  }
 
   wdt_enable(WDTO_8S);                              // Starts the watchdog timer. If it is not reset once every few seconds, then the entire device will automatically restart.                                
 }
 
 
-
 void loop()
 {
-  static unsigned long lastLoopTime = 0;            // Holds the last time the main loop ran.
+  static unsigned long last_loop_time = 0;          // Holds the last time the main loop ran.
   static bool buttonBeingPressed = 0;               // Used to debounce the push buttons.
-  static byte number_of_bytes_received = 0;         // How many characters we've stored in the serialLine array.
+  static byte number_of_bytes_received = 0;         // How many characters we've stored in the serial_line character array.
+  static byte loop_counter = 0;                     // Count how many loops have passed (reset to 0 after at most 254 loops).
+  static byte modem_counter = 0;
 
+  //wdt_reset();                                      // Reset the watchdog timer
+
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK
   // If a presentation is requested, we also send the values of the children.
   if( send_all_values ){
 #ifdef DEBUG
@@ -358,43 +518,56 @@ void loop()
     send_values();
   }
 
-  if( softSerial1.available() > 0 ){
-    char singleChar;
-    //Serial.println(F("."));
-    //processing_line = 1;
-    
-    
-    //while( processing_line && softSerial1.available() > 0 ){
-    //int maxLengthPossible = softSerial1.available();
-    //Serial.print(F("maxLengthPossible:")); Serial.println(maxLengthPossible);
-    //while( processing_line ){
-    
-    while( softSerial1.available() > 0 ){
-      singleChar = softSerial1.read();
-      Serial.print(singleChar); Serial.print(F("(")); Serial.print(number_of_bytes_received); Serial.print(F("/")); Serial.print(softSerial1.available()); Serial.print(F(")_"));
-      if( singleChar == '\n' || softSerial1.available() == 0 ){ //number_of_bytes_received == maxLengthPossible ){
-        //serialLine[number_of_bytes_received] = '\0';
-        Serial.print(F("MODEM SAYS: ")); Serial.println(serialLine);
-        number_of_bytes_received = 0;
-        processLine();
-        memset(serialLine,0,sizeof(serialLine)); // Set the serialLine back to empty
-        if( softSerial1.available() == 0 ){
-          incomingSMS = 0; // Just in case
-        }
+  // User initiated a transmission state change remotely
+  if( desired_transmission_state != transmission_state ){
+    Serial.print(F("Desired transmission state has changed to ")); Serial.println(desired_transmission_state);
+#ifdef JESSE
+    transmission_state = motor_switch(desired_transmission_state);
+#else
+    transmission_state = desired_transmission_state;
+#endif
+    EEPROM.update(EEPROM_STORAGE_START + TRANSMISSION_STATE_CHILD_ID,transmission_state); // Remember the prefered state in the eeprom memory. This will make sure it is remembered after a reboot.
 
-          
-        //processing_line = false;
-      }
-      else if( number_of_bytes_received < SERIAL_LINE_LENGTH ){
-        serialLine[number_of_bytes_received] = singleChar;
-        serialLine[number_of_bytes_received + 1] = '\0';
-        number_of_bytes_received++;
-      }
-    }
+    Serial.print(F("Sending new transmission state: ")); Serial.println(transmission_state);
+    //controller_got_transmission_state = false;
+    send(relay_message.setSensor(TRANSMISSION_STATE_CHILD_ID).set(transmission_state),1); // We acknowledge to the controller that we are now in the new state.
+    wait(RADIO_DELAY);
+
   }
 
+  // User initiated a SMS control change remotely
+  if( desired_sms_control_state != sms_control_state ){
+    Serial.print(F("Desired sms control state has changed to ")); Serial.println(desired_sms_control_state);
+    sms_control_state = desired_sms_control_state;
+    
+    Serial.print(F("Sending new sms control state: ")); Serial.println(sms_control_state);
+    //controller_got_transmission_state = false;
+    send(relay_message.setSensor(SMS_CONTROL_ID).set(sms_control_state),1); // We acknowledge to the controller that we are now in the new state.
+    wait(RADIO_DELAY);
+  }
+
+  if( send_sms ){
+    //Serial.print(F("controller: send sms. Work_string: ")); Serial.println(work_string);
+    send_sms = false;                               // Indicates the sms has been sent.
+    sendSMS();
+  }
+
+  // If any of the passwords or phone numbers have been updated, they should be stored/updated in eeprom.
+  if( store_to_eeprom ){
+    store_to_eeprom = false;                        // Indicates the storage cycle is done.
+    storeEverythingToEeprom();
+    send(text_message.setSensor(DEVICE_STATUS_ID).set( F("New value stored"))); wait(RADIO_DELAY);
+  }
+  
+#endif // connecting to network
+
+  
 
 
+  //
+  //  KEEP SIM CARD ALIVE
+  //
+  
 #ifdef SEND_SMS_EVERY_49_DAYS
   // This is an optional feature.
   // Every 49,7 days (using the millis() rollover) the system sends out an SMS. This helps keep the simcard active and registered on the GSM network. 
@@ -407,215 +580,211 @@ void loop()
   }
   if (millis() > 604800000 && millis() < 604800010 && keepAliveSMSsent == false){ // 604800000 = 1 week in milliseconds. Sending the first keep-alive SMS after a week avoids sending a lot of SMS-es while testing the system (which may involve a lot of reboots).
     keepAliveSMSsent  = true;
-    sendSMS("Candle lock says hi");
+    strcpy(work_string, phone1); 
+    sendSMS();                                      // If the work string only contains a phone number - as is the case here - a generic "Hello from Candle" SMS will be sent.
   }
 #endif
 
-  /*
-   * // test functions
-   * 
-    if( (millis() % 4000) == 0 ) { // test function. for easy testing, also comment out the sms-delete line further down.
-    //Serial.println("_____");
-    while (softSerial1.available())
-    softSerial1.read();
-    msg = "";
-    softSerial1.write("AT+CMGR=1\r\n"); // get first SMS on the phone
-    wait(1);
-    }
 
-    useful for quick debugging and playing with the GSM modem.
-    if(Serial.available()){    
-      softSerial1.write(Serial.read());
-    }
-  */
 
   //
-  // MAIN LOOP
-  // runs every few seconds. By counting how often this loop has run (and resetting that counter back to zero after 250 loops), it becomes possible to schedule all kinds of things without using a lot of memory.
-  // maximum time that can be scheduled is 4s * 250 loops = 1000 seconds. So the entire things runs approximately every 16 minutes.
+  //  GSM BOOTUP SEQUENCE
   //
 
-  static byte loopCounter = 0;                            // Count how many loops have passed (reset to 0 after at most 254 loops).
-  //static boolean loopDone = false;                        // used to make sure the 'once every millisecond' things only run once every millisecond (or 2.. sometimes the millis() function skips a millisecond.);
-
-  // allow the next loop to only run once. This entire construction saves memory by not using a long to store the last time the loop ran.
-  //if( (millis() % LOOPDURATION) > LOOPDURATION - 4 && loopDone == true ) {
-  //  loopDone = false;  
-  //}
-
-  // Main loop to time actions.
-  //if( (millis() % LOOPDURATION) < 4 && loopDone == false ) { // this module's approach to measuring the passage of time saves a tiny bit of memory.
-    //loopDone = true;
-  if (millis() - lastLoopTime > LOOPDURATION) {
-    lastLoopTime = millis();
-    loopCounter++;
-
-    wdt_reset();                                      // Reset the watchdog timer
-
-    // schedule
-    switch (loopCounter) {
-      
-      case 1:    
-        softSerial1.println(F("AT"));               // Initiating the GSM modem
-        //request(PHONENUMBER1_ID, V_TEXT); wait(RF_DELAY); // Periodically check which phone numbers are allowed. By requesting this very early we can later on avoid overwriting any values that the user may have set.
-        softSerial1.println(F("AT"));
-        //request(PHONENUMBER2_ID, V_TEXT); wait(RF_DELAY); // Periodically check which phone numbers are allowed.
-        softSerial1.println(F("AT+EGMR=2,7"));
-        Serial.println(F("Sending door states"));
-        request(RELAY1_CHILD_ID, V_LOCK_STATUS); wait(RF_DELAY);           // Periodically check which phone numbers are allowed. By requesting this very early we can later on avoid overwriting any values that the user may have set.
-        request(RELAY2_CHILD_ID, V_LOCK_STATUS); wait(RF_DELAY);           // Periodically check which phone numbers are allowed.
-        break;
-        
-      case 2:
-        //Serial.println(F("2"));
-        softSerial1.print(F("AT+CSTT=\""));
-        softSerial1.print(APN_URL);
-        softSerial1.print(F("\",\""));
-        softSerial1.print(APN_USERNAME);
-        softSerial1.print(F("\",\""));
-        softSerial1.print(APN_PASSWORD);
-        softSerial1.println(F("\""));
-        softSerial1.println(F("AT+COPS=0"));
-        //send(relaymsg.setSensor(RELAY1_CHILD_ID).set( actualDoorStates[0] )); wait(RF_DELAY); // Tell the controller in what state the lock is.
-        //send(relaymsg.setSensor(RELAY2_CHILD_ID).set( actualDoorStates[1] )); wait(RF_DELAY); // Tell the controller in what state the lock is.
-        //request(ROTATING_PASSWORD1_ID, V_TEXT); wait(RF_DELAY);     // Periodically check if there is a new password set.
-        //request(ROTATING_PASSWORD2_ID, V_TEXT); wait(RF_DELAY);     // Periodically check if there is a new password set.
-        break;
-        
-      case 3:    
-        //Serial.println(F("3"));
-        softSerial1.println(F("AT+CGATT=1"));       // AT+CGATT=1 is a GPRS attach command.
-        if(strcmp(rotatingPassword1, "door1") == 0 && strcmp(rotatingPassword2, "door2") == 0 ){ // Here we assume the controller has no password set yet (or doesn't support this), so we send it ours.
-          Serial.println(F("sending default passwords"));
-          send(charmsg.setSensor(ROTATING_PASSWORD1_ID).set(rotatingPassword1)); wait(RF_DELAY);
-          send(charmsg.setSensor(ROTATING_PASSWORD2_ID).set(rotatingPassword2)); wait(RF_DELAY);
-        }else{
-          Serial.println(F("not sending default passwords to controller"));
-        }
-        break;
-        
-      case 5:
-        softSerial1.println(F("AT+CGATT?"));
-        break;
-        
-      case 7:
-        //Serial.println(F("7"));
-        softSerial1.println(F("AT+CMGF=1")); // AT+CMGF=1 = sms mode. Get SMS as plain text. 
-        wait(300);
-        softSerial1.println(F("AT+CSDH=0"));        // CSDH=0 asks the modem to not send full SMS headers.
-        break;
-        
-      case 8:
-        //Serial.println(F("8_sms_live_mode"));            
-        softSerial1.println(F("AT+CNMI=2,2,0,0,0")); // Listen to incoming messages. 
-        break;
-        
-      case 10:
-        //Serial.println(F("10_delete all sms"));
-        softSerial1.println(F("AT+CMGD=1,4"));      // Delete all SMS messages stored on the modem.
-        break;
-        
-      case 12:
-        //Serial.println(F("12_AT+COPS?"));
-        softSerial1.println(F("AT+COPS?"));
-        break;
-        
-      case 13:
-        //softSerial1.println(F("AT^STF=1"));
-        break;
-        
-      case 14:
-        //Serial.println(F("14_CUSD"));
-        softSerial1.print(F("AT+CUSD=1,\""));
-        softSerial1.print(CUSD_COMMAND);
-        softSerial1.println(F("\",15"));            // Send a request for data to your provider, such as your prepaid balance or your phone number.
-        break;
-        
-      // Cases 15 and above happen every few minutes
-      case 16:    
-        //Serial.println(F("(16) Requesting phone numbers"));
-        //request(PHONENUMBER1_ID, V_TEXT); wait(RF_DELAY);                 // periodically check which phone numbers are allowed to control the smart lock.
-        //request(PHONENUMBER2_ID, V_TEXT); wait(RF_DELAY);                 // periodically check which phone numbers are allowed to control the smart lock.
-        break;
-        
-      case 17:    
-        //Serial.println(F("(17) Requesting the current passwords"));
-        //request(ROTATING_PASSWORD1_ID, V_TEXT); wait(RF_DELAY);           // periodically check if there is a new password set.
-        //request(ROTATING_PASSWORD2_ID, V_TEXT); wait(RF_DELAY);           // periodically check if there is a new password set.
-        waitingForResponse = true;                  // used to check if the connection with the controller is ok.
-        break;
-        
-      case 18:  
-        //Serial.println(F("(18) Free RAM = ")); //F function does the same and is now a built in library, in IDE > 1.0.0
-        //Serial.println(freeRam()); // this is a smaller, alternative function to check free memory.
-        sendHeartbeat();
-        break;
-    }
-
-    // after booting the system we skip sending the AT commands again, and go straight to re-requesting the latest passwords.
-    if(loopCounter > 15 + LOOPSBETWEENPASSWORDREQUESTS){
-      loopCounter = 15;
-    }
-
-    //Serial.print(F("loopcounter = ")); + Serial.println(loopCounter);
+  if( modem_state == MODEM_BUFFER_EMPTY && modem_booted == false ){
+    // The receive buffer has been processed. Time to send a new command in the list, or just go into "ready" state.
+    modem_counter++;
+    modem_state = WAITING_FOR_RESPONSE_FROM_MODEM;
+    Serial.println();
+    Serial.print(F("__Boot step ")); Serial.println(modem_counter);
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+    send(text_message.setSensor(DEVICE_STATUS_ID).set( (char) modem_counter ));
+#endif
     
-    if(waitingForResponse == true){
-      if(timeOutCount < MAXIMUMTIMEOUTS){                 
-        timeOutCount++;                             // Server failed to give the password in time. We're still waiting.. so connection problems?
+    switch( modem_counter ){
+
+      case 0:
+        modem.println(F("AT"));                     // Never called, since the modem_counter jumps from 0 to 1 just before this.
+        break;
+      case 1:
+        modem.println(F("AT+CCID"));                // Initiating the GSM modem
+        //Serial.println(F("<<AT"));
+        break;
+      case 2:
+        modem.println(F("ATE0"));                   // Don't echo the AT commands back to the Arduino. ATE1 turns it on instead (and it's the default too).
+        //Serial.println(F("<<ATE0"));
+        break;
+      case 3:
+        modem.println(F("AT+EGMR=?"));              // Gets IMEI code.
+        break;
+      case 4:
+        modem.println(F("AT+EGMR=2,7"));            // Set IMEI write state
+        wait(3000);
+        break;
+      case 5:
+        modem.print(F("AT+CSTT=\""));               // Send the GPRS settings
+        modem.print(APN_URL);
+        modem.print(F("\",\""));
+        modem.print(APN_USERNAME);
+        modem.print(F("\",\""));
+        modem.print(APN_PASSWORD);
+        modem.println(F("\""));
+        wait(3000);
+        break;
+      case 6:
+        modem.println(F("AT+COPS=0"));              // Connect to the GSM network
+        wait(3000);
+        break;
+      case 7:
+        modem.println(F("AT+CGATT=1"));             // Enable GPRS connection
+        wait(4000);
+      case 8:
+        modem.println(F("AT+CGATT?"));              // Did we manager to connect to GPRS?
+        break;
+      case 9:
+        modem.println(F("AT+CREG?"));               // Is the modem succesfully registered on the network?
+        break;
+      case 10:
+        modem.println(F("AT+CMGF=1"));              // SMS mode. Get SMS as plain text. 
+        break;
+      case 11:
+        modem.println(F("AT+CSDH=0"));              // CSDH=0 asks the modem to not send full SMS headers.
+        break;
+      case 12:
+        //Serial.println(F("10_delete all sms"));
+        modem.println(F("AT+CNMI=2,2,0,0,0"));      // Listen to incoming messages.
+        break;
+      case 13:
+        //Serial.println(F("8_sms_live_mode"));            
+        modem.println(F("AT+CMGD=1,4"));            // Delete all SMS messages stored on the modem.
+        wait(4000);
+        break;
+      case 14:
+        modem.println(F("AT+COPS?"));               // Outputs which GSM network the modem is connected to
+        break;
+      /*
+      case 12:
+        //modem.println(F("AT+CGATT?"));
+        break;
+      case 13:
+        //modem.println(F("AT+CSCS=?"));
+        break;
+      case 14:
+        //modem.println(F("AT+COPS?"));
+        break;
+      case 15:
+        //modem.println(F("AT^STF=1"));
+        //modem.println(F("AT+CSCS=\"GSM\""));
+        //modem.println(F("AT+CSCS=\"8859-1\""));
+        //modem.println(F("AT+CSCS=\"UCS2\""));
+        //modem.println(F("AT^STF=1"));
+        //modem.println(F("AT^STA=?"));
+        //modem.println(F("AT+CSSN=?"));
+        break;
+      */
+      
+      default:
+        Serial.println();
+        Serial.println(F("MODEM BOOT COMPLETE"));
+        Serial.println();
+        modem_state = MODEM_BUFFER_EMPTY;
+        modem_booted = true;
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM READY"))); wait(RADIO_DELAY);
+#endif
+        break;
+    }
+    wdt_reset();
+    wait(2000);
+  }
+  
+
+
+  //
+  //  MAIN LOOP
+  //
+
+  if (millis() - last_loop_time > LOOP_DURATION) { // Runs every second
+    last_loop_time = millis();
+
+    wdt_reset();                                  // Reset the watchdog timer. If this doesn't happen, the device must have crashed, and it will be automatically rebooted by the watchdog.
+
+    if( loop_counter >= SECONDS_BETWEEN_HEARTBEAT_TRANSMISSION ){ // If a couple of minutes have passed, tell the controller we're still here
+      loop_counter = 0;
+      Serial.println(F("Sending heartbeat"));
+      sendHeartbeat();                        
+      if( modem_booted == false && modem.available() == 0 && modem_state == WAITING_FOR_RESPONSE_FROM_MODEM ){ // If the boot process never (fully) ran, then this allows for a retry.
+        modem_counter = 0;
+        modem_state = MODEM_BUFFER_EMPTY;
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Modem not responding") )); wait(RADIO_DELAY);
+#endif   
+#ifdef DEBUG
+        Serial.println(F("Resetting modem state"));
+#endif
       }
-      else{
-        //Serial.println(F("! CONNECTION LOST?"));  // Server failed to give us the current password a few times. The server must be down.
-      }
+    }
+    else{
+      loop_counter++;
     }
   }
 
+
+
+  //
+  //  Manage power to the locks
+  //
 
   for( byte checkingDoor = 0; checkingDoor < DOOR_COUNT; checkingDoor++ ){ // We loop over all the doorlocks in the system, and check if they are in the right position.
     //Serial.print(F("checkingDoor ")); Serial.println(checkingDoor);
-    if( desiredDoorStates[checkingDoor] != actualDoorStates[checkingDoor] ){
+    if( desired_door_states[checkingDoor] != actualDoorStates[checkingDoor] ){
       Serial.println(F("Changing door status"));
       char updateMessage[11];
-      if( desiredDoorStates[checkingDoor] == LOCKED ){
+      if( desired_door_states[checkingDoor] == LOCKED ){
         digitalWrite(RELAY1_PIN + checkingDoor, RELAY_LOCKED);
-        strcpy_P(updateMessage, lockedMessage);
+        strcpy_P(updateMessage, lockedMessage);   // Copy the string "  locked" from PROGMEM / FLASH into RAM
       }
-      else if( desiredDoorStates[checkingDoor] == UNLOCKED ){
+      else if( desired_door_states[checkingDoor] == UNLOCKED ){
         digitalWrite(RELAY1_PIN + checkingDoor, RELAY_UNLOCKED);
-        strcpy_P(updateMessage, unlockedMessage);  // Copy the string "  unlocked" from PROGMEM / FLASH into RAM
+        strcpy_P(updateMessage, unlockedMessage); // Copy the string "  unlocked" from PROGMEM / FLASH into RAM
       }
-      updateMessage[0] = checkingDoor + 49; // Here the first character of the string is changed to create a useful message, such as "1 locked" or "2 unlocked". Ascii character '1' has number 49. 2 has number 50, etc.
+      updateMessage[0] = checkingDoor + 49;       // Here the first character of the string is changed to create a useful message, such as "1 locked" or "2 unlocked". Ascii character '1' has number 49. 2 has number 50, etc.
+#ifdef DEBUG
       Serial.print(F("updateMessage: "));Serial.println(updateMessage);
       Serial.print(F("relay ID: ")); Serial.println(RELAY1_CHILD_ID + checkingDoor);
-      Serial.print(F("new desired state: ")); Serial.println(desiredDoorStates[checkingDoor]);
-      
-      send(relaymsg.setSensor(RELAY1_CHILD_ID + checkingDoor).set( desiredDoorStates[checkingDoor] )); wait(RF_DELAY); // Tell the controller in what state the lock is.
-      send(charmsg.setSensor(DEVICE_STATUS_ID).set( updateMessage )); wait(RF_DELAY);
-      actualDoorStates[checkingDoor] = desiredDoorStates[checkingDoor];
-      EEPROM.update(EEPROM_STORAGE_START + checkingDoor, desiredDoorStates[checkingDoor]); // Store the new position in eeprom. After a reboot it will automatically jump back to this state.
+      Serial.print(F("new desired state: ")); Serial.println(desired_door_states[checkingDoor]);
+#endif
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(lock_message.setSensor(RELAY1_CHILD_ID + checkingDoor).set( desired_door_states[checkingDoor] )); wait(RADIO_DELAY); // Tell the controller in what state the lock is.
+      send(text_message.setSensor(DEVICE_STATUS_ID).set( updateMessage )); wait(RADIO_DELAY);
+#endif
+      actualDoorStates[checkingDoor] = desired_door_states[checkingDoor];
+      EEPROM.update(EEPROM_STORAGE_START + RELAY1_CHILD_ID + checkingDoor, desired_door_states[checkingDoor]); // Store the new position in eeprom. After a reboot it will automatically jump back to this state.
     }
   }
-
 
 
 #ifdef DOOR1_SELF_LOCKING
   if( actualDoorStates[0] == UNLOCKED ){
-    Serial.println("Self locking in a few seconds");
+    Serial.println(F("Self locking in a few seconds"));
     wdt_disable();
     wait(SELF_LOCKING_DELAY * 1000);
     wdt_enable(WDTO_8S);
-    desiredDoorStates[0] = LOCKED;
+    desired_door_states[0] = LOCKED;
   }
 #endif
 
+
 #ifdef DOOR2_SELF_LOCKING
   if( actualDoorStates[1] == UNLOCKED ){
-    Serial.println("Self locking in a few seconds");
+    Serial.println(F("Self locking in a few seconds"));
     wdt_disable();
     wait(SELF_LOCKING_DELAY * 1000);
     wdt_enable(WDTO_8S);
-    desiredDoorStates[1] = LOCKED;
+    desired_door_states[1] = LOCKED;
   }
 #endif
+
 
 #ifdef HAS_BUTTONS
   // Check button to toggle the state
@@ -623,9 +792,11 @@ void loop()
     //Serial.println(F("1"));
     wait(100);
     if(buttonBeingPressed == 0){
-      desiredDoorStates[0] = !desiredDoorStates[0]; // On press of the button, toggle the door 1 desired status. e.g. locked -> unlocked.
-      send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("Button 1 pressed") ));
-      Serial.print(F("Button1->")); Serial.println(desiredDoorStates[0]);
+      desired_door_states[0] = !desired_door_states[0]; // On press of the button, toggle the door 1 desired status. e.g. locked -> unlocked.
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 1 pressed") ));
+#endif
+      Serial.print(F("Button1->")); Serial.println(desired_door_states[0]);
     }
     buttonBeingPressed = 1;
   }
@@ -633,9 +804,11 @@ void loop()
     //Serial.println(F("2"));
     wait(100);
     if(buttonBeingPressed == 0){
-      desiredDoorStates[1] = !desiredDoorStates[1]; // On press of the button, toggle the door 2 desired status. e.g. locked -> unlocked.
-      send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("Button 2 pressed") ));
-      Serial.print(F("Button2->")); Serial.println(desiredDoorStates[1]);
+      desired_door_states[1] = !desired_door_states[1]; // On press of the button, toggle the door 2 desired status. e.g. locked -> unlocked.
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 2 pressed") ));
+#endif
+      Serial.print(F("Button2->")); Serial.println(desired_door_states[1]);
     }
     buttonBeingPressed = 1;  
   }
@@ -644,7 +817,74 @@ void loop()
   }
 #endif
 
+
+
+  //
+  // CHECK FOR INCOMING DATA FROM MODEM
+  //
+  
+  if( modem.available() > 0 ){
+
+
+    
+    char singleChar = modem.read();
+#ifdef DEBUG
+    //Serial.print(number_of_bytes_received); Serial.print(F("=")); Serial.write(singleChar); Serial.print(F(" (")); Serial.print( (byte) singleChar);
+    //Serial.print(F("), to go = ")); Serial.println( modem.available() );
+#endif
+    if( singleChar != 0 ){ // Ignore Null character. This gets sent by the modem once in a while.
+      serial_line[number_of_bytes_received] = singleChar;
+      number_of_bytes_received++;
+
+      if( modem_state == WAITING_FOR_RESPONSE_FROM_MODEM ){ // We got a proper response from the modem.
+        Serial.print(F(">>Got response from modem >")); Serial.println( modem.available() );
+        modem_state = MODEM_PROCESSING_RESPONSE;
+      }
+    }
+    
+    char peek_char = 49; //  ascii 1. Doesn't matter what it is really.
+    if( modem.available() > 0 ){
+      peek_char = modem.peek();
+      //Serial.print(F("-peek = ")); Serial.println(peek_char);
+      if( peek_char == 10 ){
+        //Serial.println(F("removing peek"));
+        modem.read();             // Clear the CR and LF from the buffer.
+      }
+    }
+    
+    
+    if( (singleChar == 13 && peek_char == 10) || number_of_bytes_received == SERIAL_LINE_LENGTH ){ // Each line of text the modem sends ends with two special characters, the line feed (LF) and Carriage return (CR). We don't need those anymore.
+      Serial.print(F("Received a line with a length of ")); Serial.println(number_of_bytes_received);
+      serial_line[number_of_bytes_received] = '\0';
+      number_of_bytes_received = 0;
+      Serial.println(serial_line);
+      Serial.print(F("  -to go: ")); Serial.println( modem.available() ); // After this line, how many more characters are there left in the buffer.
+      processLine();
+    }
+
+
+    if( modem.available() == 0 ){
+      if( modem_state == MODEM_PROCESSING_RESPONSE && number_of_bytes_received == 0 ){
+        Serial.println(F("Response buffer processed"));
+        modem_state = MODEM_BUFFER_EMPTY;
+      }
+#ifdef DEBUG
+      if( number_of_bytes_received != 0 ){
+        Serial.println(F("Yikes, buffer is empty but serial_line is not complete. Buffer overflow happened?"));
+        number_of_bytes_received = 0;
+      }
+#endif
+    }
+  }
+
+
+
 } // End of main loop
+
+
+
+
+
 
 
 // PROCESS LINE
@@ -653,24 +893,21 @@ void loop()
 void processLine() 
 {
 #ifdef DEBUG
-  //Serial.print(F("processing: ")); Serial.println(serialLine);
+  Serial.print(F("processing: ")); Serial.println(serial_line);
+  //send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
 #endif
-  wdt_reset();                                    // Reset the watchdog timer
 
-  //serialLine[24] = '\0';
-  send(charmsg.setSensor(SMS_CHILD_ID).set(serialLine));
-      
   // If the incomingSMS has been set, that means we already found the phonenumber part of the sms, and are now at the actual sms content part.
   if ( incomingSMS == 1 ){
-    incomingSMS = 0;                                // Reset for when the next sms needs to be dissected.
+    incomingSMS = 0;                              // Reset for when the next sms needs to be dissected.
 #ifdef DEBUG
     Serial.println(F("-At the actual text"));
 #endif
     // Does the SMS content begin with a correct password?
     byte password1length = strlen(rotatingPassword1);
     byte password2length = strlen(rotatingPassword2);
-    bool password1found = strncmp(serialLine, rotatingPassword1, password1length);
-    bool password2found = strncmp(serialLine, rotatingPassword2, password2length);
+    bool password1found = strncmp(serial_line, rotatingPassword1, password1length);
+    bool password2found = strncmp(serial_line, rotatingPassword2, password2length);
     password1found = !password1found;
     password2found = !password2found;
 
@@ -679,89 +916,141 @@ void processLine()
     Serial.print(F("pass 2 found?: "));Serial.println(password2found);
 #endif
     
-    if( password1found || password2found ){
+    if( password1found || password2found ){ // If password matches, and using SMS to control the lock is allowed
       Serial.println(F("Correct password received"));
 
-      char * command;
-      command = strstr(serialLine, " ");            // Search for the index of the space
-      if (command != NULL)                          // If successful then command now points to the second word in the SMS
-      {
-        // Serial.print(F("Command = ")); Serial.println(command);
-        // Check what the command is, and act on it.
-        bool commandLock = strncmp (command, " lock", 5);
-        bool commandUnlock = strncmp (command, " unlock", 7);
-        bool commandStatus = strncmp (command, " status", 7);
-        if(commandLock == 0){
-          Serial.println(F("->lock"));
-          if(password1found){ desiredDoorStates[0] = LOCKED; }
-          if(password2found){ desiredDoorStates[1] = LOCKED; }
-        }
-        else if(commandUnlock == 0){
-          Serial.println(F("->unlock"));
-          if(password1found){ desiredDoorStates[0] = UNLOCKED; }
-          if(password2found){ desiredDoorStates[1] = UNLOCKED; }
-        }
-        else if(commandStatus == 0){
-          Serial.println(F("command: send status sms"));
-          char updateMessage[11];
-          if(password1found == 0){ 
-            if( actualDoorStates[0] == LOCKED ){ strcpy_P(updateMessage, lockedMessage); }
-            else { strcpy_P(updateMessage, unlockedMessage); }
-            updateMessage[0] = '1';
+      if( sms_control_state ){
+        char * command;
+        command = strstr(serial_line, " ");          // Search for the index of the space
+        if (command != NULL)                        // If successful then command now points to the second word in the SMS
+        {
+          // Serial.print(F("Command = ")); Serial.println(command);
+          // Check what the command is, and act on it.
+          bool commandLock = strncmp (command, " lock", 5);
+          bool commandUnlock = strncmp (command, " unlock", 7);
+          bool commandStatus = strncmp (command, " status", 7);
+          if(commandLock == 0){
+            Serial.println(F("->lock"));
+            if(password1found){ desired_door_states[0] = LOCKED; }
+            if(password2found){ desired_door_states[1] = LOCKED; }
           }
-          if(password2found == 0){ 
-            if( actualDoorStates[1] == LOCKED ){ strcpy_P(updateMessage, lockedMessage); }
-            else { strcpy_P(updateMessage, unlockedMessage); }
-            updateMessage[0] = '2';
+          else if(commandUnlock == 0){
+            Serial.println(F("->unlock"));
+            if(password1found){ desired_door_states[0] = UNLOCKED; }
+            if(password2found){ desired_door_states[1] = UNLOCKED; }
           }
-          sendSMS(updateMessage);
+          else if(commandStatus == 0){
+            Serial.println(F("command: send status sms"));
+            //char updateMessage[11];
+            if( password1found ){ // If it's zero, it means it was found.
+              if( actualDoorStates[0] == LOCKED ){ strcpy_P(work_string, lockedMessage); }
+              else { strcpy_P(work_string, unlockedMessage); }
+              work_string[0] = 49; // ascii 1
+            }
+            if( password2found ){ 
+              if( actualDoorStates[1] == LOCKED ){ strcpy_P(work_string, lockedMessage); }
+              else { strcpy_P(work_string, unlockedMessage); }
+              work_string[0] = 50; // ascii 2
+            }
+            Serial.println(F("Status SMS: ")); Serial.println(work_string);
+            sendSMS(); // Sends the work_string array, which now contains a message about the door's lock status
+          }
         }
       }
     }
-    else {                                          // If the SMS did not contain a good password, we will send it to the controller.
+    else {                                        // If the SMS did not contain a good password, we will send it to the controller.
       Serial.println(F("Incorrect password"));
       //char tempLine[25];
-      //byte i = 25;                                // How many characters we will copy into the new variable
-      //while ( i-- ) *( tempLine + i ) = *( serialLine + i ); // Copying characters from serialLine variable into a new one.
-      //send(charmsg.setSensor(SMS_CHILD_ID).set(tempLine)); wait(RF_DELAY);
-      serialLine[24] = '\0';
-      send(charmsg.setSensor(SMS_CHILD_ID).set(serialLine));
+      //byte i = 25;                              // How many characters we will copy into the new variable
+      //while ( i-- ) *( tempLine + i ) = *( serial_line + i ); // Copying characters from serial_line variable into a new one.
+      //send(text_message.setSensor(SMS_CHILD_ID).set(tempLine)); wait(RADIO_DELAY);
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      serial_line[24] = '\0';
+      send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+#endif
     }
-    softSerial1.println(F("AT+CMGD=1,4"));          // Delete all received SMS messages (for A6 based GSM modem).
+    Serial.println(F("Deleting SMS message"));
+    modem.println(F("AT+CMGD=1,4"));        // Delete all received SMS messages (for A6 based GSM modem).
   }
   else {
     
-    //bool connectedToNetwork = strncmp(serialLine, "+CREG: 5", 8);
+    //bool connectedToNetwork = strncmp(serial_line, "+CREG: 5", 8);
     //if (connectedToNetwork == 0){
-    if( !strncmp(serialLine, "+CREG: 5", 8) ){      // Connected to the GSM network
+    if( !strncmp(serial_line, "+CREG: 5", 8) ){    // Connected to the GSM network
       Serial.println(F("GSM CONNECTED"));
-      send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("GSM CONNECTED"))); wait(RF_DELAY);
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM OK"))); wait(RADIO_DELAY);
+#endif
     }
 
+    else if( !strncmp(serial_line, "+CMS ERR", 8) ){    // Counter intuitively, if the string matches, the result is 0. In this case, the modem tells us there is an error. After an attempt to send an SMS, this could indicate a lack of network connection or lack of funds.
+      Serial.println(F("GSM ERROR (no network or funds?)"));
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      serial_line[24] = '\0';
+      Serial.println(serial_line);
+      send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+      wait(1000);
+      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM network error (CMS)") )); wait(RADIO_DELAY);
+      wait(2000);
+      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Check funds or phone #1") )); wait(RADIO_DELAY);
+#endif
+    }
 
-    else if( !strncmp(serialLine, "+CUSD:", 6) ){        // We received the response from the command.
-      byte commandPos = 11;                         // 11 is the position in the character array where the returned command actually starts.
-      byte savePos = 0;                             // The position in the array where we are storing the new value.
-      static byte shift = 0;                        // How many of the bits must be shifted over to the next byte. Since are are handling 8 bits but only need 7, we keep having one bit left over. Once there is a need to shift 7 bits, that means we have the extra 'bonus' character.
-      byte nextLeftOver = 0;                        // The leftover bits from the current translation
-      byte prevLeftOver = 0;                        // The leftover bits from the previous translation.
+    else if( !strncmp(serial_line, "+CME ERR", 8) ){    // This error could occus if a user sends an incorrect code to their mobile provider
+      Serial.println(F("GSM ERROR (incorrect code sent?)"));
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      serial_line[24] = '\0';
+      send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+      //send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM error (CME)") )); wait(RADIO_DELAY);
+      //wait(1000);
+#endif
+    }
 
-      while ( commandPos < 255 ){
+    // We can send special commands to the modem. The response is encoded in a 7 bit instead of 8 bit way, and needs to be decoded.
+    else if( !strncmp(serial_line, "+CUSD:", 6) ){ // We received the response from the *# command.
+
+      Serial.println(F("Decoding")); // Serial.println(serial_line);
+      
+      byte commandPos = 11;                       // 11 is the position in the character array where the returned command actually starts.
+      byte savePos = 0;                           // The position in the array where we are storing the new value.
+      //static byte shift = 0;                      // How many of the bits must be shifted over to the next byte. Since are are handling 8 bits but only need 7, we keep having one bit left over. Once there is a need to shift 7 bits, that means we have the extra 'bonus' character.
+      byte shift = 0;                      // How many of the bits must be shifted over to the next byte. Since are are handling 8 bits but only need 7, we keep having one bit left over. Once there is a need to shift 7 bits, that means we have the extra 'bonus' character.
+
+      //Serial.print(F("shift = ")); Serial.println(shift);
+      byte nextLeftOver = 0;                      // The leftover bits from the current translation
+      byte prevLeftOver = 0;                      // The leftover bits from the previous translation.
+
+
+      //char value = 49
+      while ( commandPos < SERIAL_LINE_LENGTH ){ //sizeof(serial_line) ){ // was 255 // Alternatively, the reserved size of the serial_line array is simply SERIAL_LINE_LENGTH
+        
         prevLeftOver = nextLeftOver;
         nextLeftOver = 0;
-        
-        unsigned char value = serialLine[commandPos]; // Get a character from the serial data.
 
-        if( savePos == 24 || value == "\"" || value == 34){ // Each time we've decoded 25 characters, or if we have arrived at the end of the serialLine, then we should send the retrieved information to the controller
-          serialLine[savePos] = '\0';
-          savePos = 0;
-#ifdef DEBUG
-          Serial.print(F(" sending: ")); Serial.println(serialLine);
-#endif
-          send(charmsg.setSensor(DEVICE_STATUS_ID).set( serialLine )); wait(RF_DELAY);
+        boolean should_send_line = false;
+        char value = serial_line[commandPos]; // Get a character from the serial data.
+        if( value == 0 ){
+          //Serial.println(F("found NULL")); // Shouldn't really happen?
+          //should_send_line = true;
+          break;
         }
-        if( value == "\"" || value == 34 ){         // We're at the end of the serialLine.
-          //Serial.println(F("--end-of-serial-line--"));
+        
+        //Serial.print(commandPos); Serial.print(F("=")); Serial.write(value); Serial.println(F(" "));
+
+        if( savePos == 24 || value == 34 || value == 0 ){
+        //if( should_send_line ){
+          work_string[savePos] = '\0';
+          savePos = 0;                                // Set the postion of the write head back to 0.
+#ifdef DEBUG
+          Serial.println(work_string);
+#endif
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+          send(text_message.setSensor(DEVICE_STATUS_ID).set( work_string )); wait(RADIO_DELAY);
+#endif
+          wait(2000);                                 // Allows the user to read the response more easily if it has multiple lines.
+        }
+        if( value == 34 ){       // We're at the end of the serial_line.
+          //Serial.println(F("found closing \""));
           break;
         }
 
@@ -770,17 +1059,19 @@ void processLine()
           bitWrite( nextLeftOver, j, bitRead(value,(7-shift) + j) ); 
         }
         
-        value = value << shift;                     // Scoot everything over. The bits that get destroyed have already been safeguarded.    
-        value = value | prevLeftOver;               // overlay the previous left over bits. This will create the final character.
-        bitWrite( value, 7, 0 );                    // Force it to be a 7-bit character by turning the 8th bit to 0. 
-        //Serial.print( (char) value);
-        serialLine[savePos] = value;                // Store the final decoded value back in the original serialLine array (to save memory).
+        value = value << shift;                   // Scoot everything over. The bits that get destroyed have already been safeguarded.    
+        value = value | prevLeftOver;             // overlay the previous left over bits. This will create the final character.
+        //Serial.print(">"); Serial.println(value);
+        bitWrite( value, 7, 0 );                  // Force it to be a 7-bit character by turning the 8th bit to 0. 
+        //Serial.print(">"); Serial.print( (char) value);
+        //Serial.print(">"); Serial.print( (char) value); Serial.print(">"); Serial.println(value);
+        work_string[savePos] = value;              // Store the final decoded value back in the original serial_line array (to save memory).
         savePos++;
         
         shift++;
         if( shift == 7 ){
-          //Serial.print( (char) nextLeftOver);       // Once every 7 loops the left-over part will itself be 7 bits long. We can just print this as the 7th character.
-          serialLine[savePos] = (char) nextLeftOver; //value;              // Store the final decoded value back in the original array.
+          //Serial.print( (char) nextLeftOver);   // Once every 7 loops the left-over part will itself be 7 bits long. We can just print this as the 7th character.
+          work_string[savePos] = (char) nextLeftOver; //value;              // Store the final decoded value back in the original array.
           savePos++;
           nextLeftOver = 0;
           shift = 0;
@@ -790,10 +1081,7 @@ void processLine()
       Serial.println();
     }
 
-
-    //bool atPhoneNumberLine = strncmp(serialLine, "+CMT", 4); // Are we at the part of the SMS that holds the sender's phonenumber?
-    //if (atPhoneNumberLine == 0){
-    else if( !strncmp(serialLine, "+CMT:", 4) ){         // Are we at the part of the SMS that holds the sender's phonenumber?
+    else if( !strncmp(serial_line, "+CMT:", 4) ){  // Are we at the part of the SMS that holds the sender's phonenumber?
 #ifdef DEBUG
       Serial.println(F("+CMT found"));
       // Can we find a phonenumber in the serial line?
@@ -805,30 +1093,31 @@ void processLine()
       //char * q;
       byte p;
       byte q;      
-      p = strstr (serialLine, phone1);              // At what position in the serialLine have we spotted the phone number? If it is 0 this means it has not been found.
-      q = strstr (serialLine, phone2);
-      if (p || q) { // If one of the phone numbers was found in the string, then one of these will be bigger than 0.
+      p = strstr (serial_line, phone1);            // At what position in the serial_line have we spotted the phone number? If it is 0 this means it has not been found.
+      q = strstr (serial_line, phone2);
+      if (p || q) {                               // If one of the phone numbers was found in the string, then one of these will be bigger than 0.
         Serial.println(F("Phone number is allowed"));
-        incomingSMS = 1;                            // We may now proces the sms content, which should be on the next serial line.
-        Serial.print(F("Soft Serial available: ")); Serial.println( softSerial1.available() );
+        incomingSMS = 1;                          // We may now proces the sms content, which should be on the next serial line.
+#ifdef DEBUG
+        Serial.print(F("Buffer still available: ")); Serial.println( modem.available() );
+#endif
         return;
         /*
         if (p){
-          send(charmsg.setSensor(DEVICE_STATUS_ID).set( phone1 )); wait(RF_DELAY); // Tell the controller which phone number just sent us an SMS.
+          send(text_message.setSensor(DEVICE_STATUS_ID).set( phone1 )); wait(RADIO_DELAY); // Tell the controller which phone number just sent us an SMS.
         }
         else{
-          send(charmsg.setSensor(DEVICE_STATUS_ID).set( phone2 )); wait(RF_DELAY); // Tell the controller which phone number just sent us an SMS.
+          send(text_message.setSensor(DEVICE_STATUS_ID).set( phone2 )); wait(RADIO_DELAY); // Tell the controller which phone number just sent us an SMS.
         }
         */
-        //Serial.println(F("DONE"));
-        //memcpy( foundNumber, &serialLine[8], 10 ); // Starts at position 10 in the serialLine and then copies 12 characters
+        //char foundNumber[15];
+        //memcpy( foundNumber, &serial_line[8], 10 ); // Starts at position 10 in the serial_line and then copies 12 characters
       }
       else {
-        send(charmsg.setSensor(DEVICE_STATUS_ID).set(F("Unknown phonenumber!")));
-        Serial.println(F("Permission denied for "));    // Neither allowed phone number was detected. Fun fact: if the two phone number arrays to compare against are "" (empty), the above should also trigger, which means any phone number may control the device.
-        char foundNumber[14];                       // Holds the phone number that sent the SMS
+        Serial.println(F("Permission denied for: ")); // Neither allowed phone number was detected. Fun fact: if the two phone number arrays to compare against are "" (empty), the above should also trigger, which means any phone number may control the device if no phone numbers are set.
+        char foundNumber[14];                     // Holds the phone number that sent the SMS
         for (byte i = 8; i < 20; i++) {
-          unsigned char character = serialLine[i];
+          char character = serial_line[i];
           if( isDigit(character) ){
             Serial.write(character);
             foundNumber[i - 8] = character;
@@ -837,93 +1126,784 @@ void processLine()
         }
         Serial.println();
         // Send the unexpected phone number:
-        send(charmsg.setSensor(DEVICE_STATUS_ID).set( foundNumber )); wait(RF_DELAY); // Tell the controller which phone number just sent us an SMS.
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+        send(text_message.setSensor(DEVICE_STATUS_ID).set(F("Unknown phone number!")));
+        send(text_message.setSensor(SMS_CHILD_ID).set( foundNumber )); wait(RADIO_DELAY); // Tell the controller which phone number just sent us an SMS.
+#endif
       }
     }
   }
 }
 
-
+#ifdef ALLOW_CONNECTING_TO_NETWORK
 // This function is called when messages from the home controller arrive.
 void receive(const MyMessage &message)
 {
-  wdt_reset();                                    // Reset the watchdog timer
-  timeOutCount = 0;
+  //timeOutCount = 0;
 #ifdef DEBUG
   Serial.print(F("->receiving message for child ")); Serial.println(message.sensor);
 #endif
 
   if (message.isAck()) {
-    Serial.println(F("-Ack"));
+    Serial.println(F("- Echo"));
   }
-  else if (message.type == V_LOCK_STATUS) {            // Change relay state  
-    desiredDoorStates[message.sensor - RELAY1_CHILD_ID] = message.getBool()?RELAY_LOCKED:RELAY_UNLOCKED;
-    Serial.print(F("Controller -> door ")); Serial.print(message.sensor - RELAY1_CHILD_ID); Serial.print(F(" -> ")); Serial.println(desiredDoorStates[message.sensor - RELAY1_CHILD_ID]);
+  else if (message.type == V_LOCK_STATUS) {       // Change lock state  
+    desired_door_states[message.sensor - RELAY1_CHILD_ID] = message.getBool()?RELAY_LOCKED:RELAY_UNLOCKED;
+    Serial.print(F("Controller -> door ")); Serial.print(message.sensor - RELAY1_CHILD_ID); Serial.print(F(" -> ")); Serial.println(desired_door_states[message.sensor - RELAY1_CHILD_ID]);
 
-    //for( byte checkingDoor = 0; checkingDoor < DOOR_COUNT; checkingDoor++ ){
-    //  if( message.sensor == RELAY1_CHILD_ID + checkingDoor ){ // If we found the door the message corresponds with
-    //    desiredDoorStates[checkingDoor] = message.getBool()?RELAY_LOCKED:RELAY_UNLOCKED; // Set the desired state of the lock. In the next loop this will be made actual.
-    //    Serial.print(F("Controller -> door ")); Serial.print(checkingDoor); Serial.print(F(" -> ")); Serial.println(desiredDoorStates[checkingDoor]);
-    //  }
-    //}
+    send(lock_message.setSensor(message.sensor).set( message.getBool() )); // Tell the controller that the value was received.
+  }
+  else if (message.type == V_STATUS) {
+
+    send(relay_message.setSensor(message.sensor).set( message.getBool() ));
+    
+    if( message.sensor == TRANSMISSION_STATE_CHILD_ID ){  // Data transmission toggle  
+      desired_transmission_state = message.getBool(); //?RELAY_ON:RELAY_OFF;
+      //send(relay_message.setSensor(TRANSMISSION_STATE_CHILD_ID).set(desired_transmission_state));
+      Serial.print(F("-New desired transmission state: ")); Serial.println(desired_transmission_state);
+    }
+    else if( message.sensor == SMS_CONTROL_ID ){    // SMS control toggle
+      desired_sms_control_state = message.getBool(); //?RELAY_ON:RELAY_OFF;
+      //send(relay_message.setSensor(SMS_CONTROL_ID).set(desired_sms_control_state));
+      Serial.print(F("-New desired sms control state: ")); Serial.println(desired_sms_control_state);
+    }
   }
   else if (message.type == V_TEXT) {
 
     Serial.print(F("- incoming string: "));Serial.println(message.getString());
-    
-    // Receiving the rotating passwords.
-    //waitingForResponse = false;
+    send(text_message.setSensor(message.sensor).set( message.getString() )); // Tell the controller that the value was received.
 
-    if( message.sensor >= ROTATING_PASSWORD1_ID && message.sensor < ROTATING_PASSWORD1_ID + DOOR_COUNT ){
-      send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("received new password"))); wait(RF_DELAY);
+
+    // If the controller asks us to send an SMS.
+    if(message.sensor == SENDSMS_CHILD_ID){
+      //strcpy(smsToSend, message.getString());
+      strcpy(work_string, message.getString());
+      send_sms = true;
+      //send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Sending SMS...")));
     }
 
     if(message.sensor == ROTATING_PASSWORD1_ID){
       if( rotatingPassword1 != message.getString() ){
         strcpy(rotatingPassword1, message.getString());
         Serial.print(F("Rotating password 1 is now: ")); Serial.println(rotatingPassword1);
-        //send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("received latest password 1"))); wait(RF_DELAY);
+        store_to_eeprom = true; 
+        //send(text_message.setSensor(DEVICE_STATUS_ID).set( F("received latest password 1"))); wait(RADIO_DELAY);
       }
     }
     else if(message.sensor == ROTATING_PASSWORD2_ID){
       if( rotatingPassword2 != message.getString() ){
         strcpy( rotatingPassword2, message.getString());
         Serial.print(F("Rotating password 2 is now: ")); Serial.println(rotatingPassword2);
-        //send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("received latest password 2"))); wait(RF_DELAY);
+        store_to_eeprom = true; 
+        //send(text_message.setSensor(DEVICE_STATUS_ID).set( F("received latest password 2"))); wait(RADIO_DELAY);
       }
     }
-      
-      //for ( int i = 0; i < 25; i++ ){
-      //  EEPROM.update (EEPROM_STORAGE_START + (message.sensor * 25) + i, rotatingPassword1 [ i ] );
-      //}
-
+    
     // Receiving the (parts of) phonenumbers that are allowed to operate the smart lock.
     else if(message.sensor == PHONENUMBER1_ID){
-      //if( sizeof(message.getString()) > 2 ){
       strcpy(phone1, message.getString());
-      //}
+      store_to_eeprom = true;
       Serial.println(F("received phone #1 ")); 
 #ifdef DEBUG
       Serial.print(F("phone1: ")); Serial.println(phone1);
 #endif
-      //send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("received phone 1"))); wait(RF_DELAY);
     }
     else if(message.sensor == PHONENUMBER2_ID){
       //if( sizeof(message.getString()) > 2 ){
       strcpy(phone2, message.getString());
+      store_to_eeprom = true; 
       //}
       Serial.println(F("received phone #2 "));
 #ifdef DEBUG
       Serial.print(F("phone2: ")); Serial.println(phone2);
 #endif
-      //send(charmsg.setSensor(DEVICE_STATUS_ID).set( F("received phone 2"))); wait(RF_DELAY);
     }
-        
-    // If the controller asks us to send an SMS.
-    else if(message.sensor == SENDSMS_CHILD_ID){
-      char smsToSend[26]; // Todo: shouldn't this be global so that the other function can handle it? And then set 'send-sms' var to true.
-      strcpy(smsToSend, message.getString());
-      sendSMS(smsToSend); // ToDo: make this change a variable and a state instead, so that sending can be handled in the main loop. It's best to keep interuptions short.
-    }
+
+    // If could also be that the Status and Received SMS string are sent back. Those should just be ignored.
   }
 }
+#endif // connecting to network
+
+
+
+
+// Function to send an SMS to the main phone number.
+void sendSMS()
+{
+
+  boolean placeholder = strstr(work_string, "Change me to send SMS");
+  
+  if( modem_booted && modem_state == MODEM_BUFFER_EMPTY && placeholder == NULL){
+#ifdef DEBUG
+    Serial.print(F("In sendSMS. string = ")); Serial.println(work_string);
+    Serial.println(placeholder);
+#endif
+
+    //boolean actual_new_SMS_message = strstr(work_string, "Change me to send SMS");          // Search for the index
+    //if (actual_new_SMS_message == NULL){                        // If successful then command now points to the second word in the SMS
+  
+    byte i = 0;
+    char c = 49;
+    
+    if( work_string[0] == 42 ){       // Detect is the SMS to send starts with a *. If so, it will be parsed as command to the telephony provider. For example, with LycaMobile the code *101# will tell you your balance, and *102# will tell you your phone number.
+      Serial.println(F("starts with *"));
+
+      boolean contains_hash_character = false;
+      while( c != 35 && i < WORK_STRING_SIZE ){
+        if( work_string[i] == 35 ){                    // ascii character 35 is the #
+          //Serial.println(F("#"));
+          contains_hash_character = true;             // We only send the command if the string contains a closing # too.
+        }
+        i++;
+      }
+      
+      if( contains_hash_character ){
+        modem_state = WAITING_FOR_RESPONSE_FROM_MODEM;
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("...") )); wait(RADIO_DELAY);
+#endif
+        //while( modem.available() ){ // The response may be large, so in this case we clear the existing buffer.
+        //  modem.read();
+        //}
+        modem.print(F("AT+CUSD=1,\""));
+        i = 0;
+        c = 49;
+        while( c != 35 && i < WORK_STRING_SIZE ){     // While we're not at the closing # in the command yet, we print the characters of the command
+          c = work_string[i];                          // Could this step be skipped, and just print work_string[i] directly?
+          //Serial.println(c);
+          modem.write(c);
+          i++;
+        }
+        modem.println(F("\",15"));              // Send a request for data to your provider, such as your prepaid balance or your phone number.
+        modem_state = WAITING_FOR_RESPONSE_FROM_MODEM;
+      }
+    }
+    
+    else if( (work_string[0] == 43 || work_string[0] == 48) && isDigit(work_string[1]) && isDigit(work_string[2]) ){ //&& work_string[1] > 47 && work_string[1] < 58){ // The numbers 43 and 48 are the ascii codes for + and 0 respectively
+      Serial.println(F("String started with 0 or +")); // We can only send an SMS is the SMS starts with a phone number.
+      modem_state = WAITING_FOR_RESPONSE_FROM_MODEM;
+      modem.print(F("AT+CMGS=\""));
+      i = 0;
+      c = 49;
+      boolean at_actual_content = false;
+      while( c != 0 && i < WORK_STRING_SIZE ){
+        c = work_string[i];
+        /*
+        if( at_actual_content == false && c > 57){    // If we detect an alphabetical letter, perhaps the user has forgotten to use a space after the phone number. Here we add it manually.
+          Serial.println(F("User forgot space?"));
+          c = " ";
+          i--;
+        }
+        */
+        if( c == 32 && at_actual_content == false ){ // 32 is the ascii code for a space
+          at_actual_content = true;
+          modem.print(F("\"\r"));
+          Serial.print(F("]Space["));
+          wait(500);
+        }
+        
+        modem.write(c);
+        Serial.write(c);
+        i++;
+      }
+      if( at_actual_content == false ){ // The string never contained a space / sms text, so we use a default one.
+        modem.print(F("\"\r"));
+        wait(500);
+        modem.print(F("Smart lock says hello"));
+      }
+      //modem.write(0x1A); // The command to actually send away the SMS.
+      modem.println( char(26) );
+      modem_state = WAITING_FOR_RESPONSE_FROM_MODEM;
+      Serial.println(F("]SMS sent"));
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("SMS passed to modem") )); wait(RADIO_DELAY);
+#endif
+    }
+    
+    else if( phone1[0] == 43 || phone1[0] == 48 ){ // The numbers 43 and 48 are the ascii codes for + and 0 respectively
+      Serial.println(F("Using phone #1"));
+
+      modem.print("AT+CMGS=\""); modem.print(phone1); modem.println("\"\r");
+      wait(200);
+      //modem.print("test message from A6");
+
+      i = 0;
+      c = 49;
+      while( c != 0 && i < WORK_STRING_SIZE ){
+        c = work_string[i];
+        modem.write(c);
+        Serial.write(c);
+        i++;
+      }
+      
+      modem.println (char(26)); // ctrl-z
+      /*
+      modem.print(F("AT+CMGS=\""));
+      i = 0;
+      c = 49;
+      boolean at_actual_content = false;
+      while( c != 0 && i < sizeof(phone1) ){
+        c = phone1[i];
+        modem.write(c);
+        Serial.write(c);
+        i++;
+      }
+      modem.println(F("\"\r"));
+      Serial.print(F("]Space["));
+      */
+      /*
+      wait(200);
+      i = 0;
+      c = 49;
+      while( c != 0 && i < WORK_STRING_SIZE ){
+        c = work_string[i];
+        modem.write(c);
+        Serial.write(c);
+        i++;
+      }
+      modem.write(0x1A); // The command to actually send away the SMS.
+      */
+      Serial.println(F("]SMS sent to phone1"));
+      modem_state = WAITING_FOR_RESPONSE_FROM_MODEM;
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("SMS sent to phone 1"))); wait(RADIO_DELAY);
+#endif
+    }
+    else{
+      Serial.println(F("No good phone number set, so cannot send SMS"));
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("No phone number 1"))); wait(RADIO_DELAY);
+#endif
+    }
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(text_message.setSensor(SENDSMS_CHILD_ID).set( F("Change me to send SMS"))); //wait(RADIO_DELAY);
+#endif
+
+  wait(1000);
+    
+    
+  }
+#ifdef DEBUG
+  else{
+    Serial.println(F("Will not send this SMS (busy)"));
+  }
+#endif
+}
+
+
+
+
+
+
+
+
+
+#ifdef JESSE
+boolean motor_switch(boolean destination) {
+  Serial.print(F("Motor switching to ")); Serial.println(destination);
+  //Serial.println(F("This list of measurements should start with 1 and end with 0"));
+
+  digitalWrite(MOTOR_FORWARD_PIN, !destination);
+  digitalWrite(MOTOR_BACKWARD_PIN, destination);
+
+  boolean error = false;
+  byte counter = 0;
+  if(destination == false){                       // Moving to on state, in which the bototm switch is 1 and the top switch is 0.
+    while( digitalRead(BOTTOM_MOTOR_SWITCH_PIN) ){ // While the bottom switch reads 1 it is not being pressed. When it is pressed, it will go to 0, and exit this loop.
+      wait(3);
+      Serial.println(digitalRead(BOTTOM_MOTOR_SWITCH_PIN));
+      counter++;
+      if(counter > 100){                          // This is a safety feature to exit the loop if something strange is going on.
+        Serial.print(F("break"));
+        error = true;
+        break;
+      }
+    }
+  }
+  else{
+    while( digitalRead(TOP_MOTOR_SWITCH_PIN) ){
+      wait(3);
+      Serial.println(digitalRead(TOP_MOTOR_SWITCH_PIN));
+      counter++;
+      if(counter > 100){
+        error = true;
+        Serial.print(F("break"));
+        break;
+      }
+    }
+  }
+  digitalWrite(MOTOR_FORWARD_PIN, LOW);
+  digitalWrite(MOTOR_BACKWARD_PIN, LOW);
+  
+  if( error == false ){
+    //EEPROM.update(EEPROM_STORAGE_START + TRANSMISSION_STATE_CHILD_ID, transmission_state);   // We remember the current state of the toggle switch.
+    Serial.println(F("WENT OK"));
+    return destination;
+    Serial.print(F("-Motor switched. New transmission state: ")); Serial.println(transmission_state);
+  }
+  else{
+    Serial.println(F("ERROR motor swiching to the new position got stuck in an endless loop"));
+    wait(400); // Give the motor some time to cool down ever so slightly
+    Serial.println(F("ERROR motor swiching to the new position got stuck in an endless loop cooler done"));
+    return !digitalRead(TOP_MOTOR_SWITCH_PIN);    // If the top switch (which is the main one that determines the transmission state) is in the on state, the top switch will read as 0, so we invert it.
+  }
+}
+#endif // Jesse
+
+
+
+
+void storeToEeprom(char TheArray[], int n, int eeprom_starting_position)       // Currently not used, but could be used to improve the code
+{
+  //Serial.println(F("storing to eeprom: "));
+  char c = 49; // "1", a random non-null character
+  for ( int i = 0; i < n; i++ ){
+    if( c != '\0'){           // After we find the zero that terminiates the string, we keep writing zeros to the rest of the eeprom storage location.
+      c = TheArray[i];
+    }
+    Serial.print(i); Serial.print(F("=")); Serial.println(c);
+    EEPROM.update(eeprom_starting_position + i, c);
+  }
+}
+      
+      
+void loadFromEeprom(char TheArray[], int n, int eeprom_starting_position)
+{
+  //Serial.println(F("loading from eeprom: "));
+  for ( int i = 0; i < n; i++ ){
+    TheArray[i] = EEPROM.read(eeprom_starting_position + i);
+    Serial.print(i); Serial.print(F("=")); Serial.println(TheArray[i]);
+  }
+}
+
+void storeEverythingToEeprom(){
+#ifdef DEBUG
+  Serial.println(F("{{ Storing everything to eeprom"));
+#endif
+  EEPROM.update(EEPROM_STORAGE_START + 255,1);           // Indicates that the eeprom now contains user data.
+  storeToEeprom(rotatingPassword1, 26, EEPROM_STORAGE_START + ROTATING_PASSWORD1_ID);
+  storeToEeprom(rotatingPassword2, 26, EEPROM_STORAGE_START + ROTATING_PASSWORD2_ID);
+  storeToEeprom(phone1, 15, EEPROM_STORAGE_START + PHONENUMBER1_ID); // To be more future proof, we store the phone numbers a little higher than the passwords so that we could store 4 passwords (at positions 10, 36, 52 87), and then 4 phone numbers (120, 135, 150, 165)
+  storeToEeprom(phone2, 15, EEPROM_STORAGE_START + PHONENUMBER2_ID);  
+}
+
+
+void loadEverythingFromEeprom(){
+#ifdef DEBUG
+  Serial.println(F("}} Loading everything from eeprom"));
+#endif
+  loadFromEeprom(rotatingPassword1, 26, EEPROM_STORAGE_START + ROTATING_PASSWORD1_ID);
+  loadFromEeprom(rotatingPassword2, 26, EEPROM_STORAGE_START + ROTATING_PASSWORD2_ID);
+  loadFromEeprom(phone1, 15, EEPROM_STORAGE_START + PHONENUMBER1_ID);
+  loadFromEeprom(phone2, 15, EEPROM_STORAGE_START + PHONENUMBER2_ID);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#define _DEBUG 0
+#define _DEBUG_PIN1 11
+#define _DEBUG_PIN2 13
+CandleSoftwareSerial *CandleSoftwareSerial::active_object = 0;
+uint8_t CandleSoftwareSerial::_receive_buffer[_SS_MAX_RX_BUFF]; 
+volatile uint8_t CandleSoftwareSerial::_receive_buffer_tail = 0;
+volatile uint8_t CandleSoftwareSerial::_receive_buffer_head = 0;
+
+inline void DebugPulse(uint8_t, uint8_t) {}
+
+inline void CandleSoftwareSerial::tunedDelay(uint16_t delay) { 
+  _delay_loop_2(delay);
+}
+
+bool CandleSoftwareSerial::listen()
+{
+  if (!_rx_delay_stopbit)
+    return false;
+
+  if (active_object != this)
+  {
+    if (active_object)
+      active_object->stopListening();
+
+    _buffer_overflow = false;
+    _receive_buffer_head = _receive_buffer_tail = 0;
+    active_object = this;
+
+    setRxIntMsk(true);
+    return true;
+  }
+
+  return false;
+}
+
+bool CandleSoftwareSerial::stopListening()
+{
+  if (active_object == this)
+  {
+    setRxIntMsk(false);
+    active_object = NULL;
+    return true;
+  }
+  return false;
+}
+
+void CandleSoftwareSerial::recv()
+{
+
+#if GCC_VERSION < 40302
+// Work-around for avr-gcc 4.3.0 OSX version bug
+// Preserve the registers that the compiler misses
+// (courtesy of Arduino forum user *etracer*)
+  asm volatile(
+    "push r18 \n\t"
+    "push r19 \n\t"
+    "push r20 \n\t"
+    "push r21 \n\t"
+    "push r22 \n\t"
+    "push r23 \n\t"
+    "push r26 \n\t"
+    "push r27 \n\t"
+    ::);
+#endif  
+
+  uint8_t d = 0;
+
+  if (_inverse_logic ? rx_pin_read() : !rx_pin_read())
+  {
+    setRxIntMsk(false);
+    tunedDelay(_rx_delay_centering);
+    DebugPulse(_DEBUG_PIN2, 1);
+    for (uint8_t i=8; i > 0; --i)
+    {
+      tunedDelay(_rx_delay_intrabit);
+      d >>= 1;
+      DebugPulse(_DEBUG_PIN2, 1);
+      if (rx_pin_read())
+        d |= 0x80;
+    }
+
+    if (_inverse_logic)
+      d = ~d;
+
+    // if buffer full, set the overflow flag and return
+    uint8_t next = (_receive_buffer_tail + 1) % _SS_MAX_RX_BUFF;
+    if (next != _receive_buffer_head)
+    {
+      // save new data in buffer: tail points to where byte goes
+      _receive_buffer[_receive_buffer_tail] = d; // save new byte
+      _receive_buffer_tail = next;
+    } 
+    else 
+    {
+      DebugPulse(_DEBUG_PIN1, 1);
+      _buffer_overflow = true;
+    }
+
+    // skip the stop bit
+    tunedDelay(_rx_delay_stopbit);
+    DebugPulse(_DEBUG_PIN1, 1);
+    setRxIntMsk(true);
+
+  }
+
+#if GCC_VERSION < 40302
+// Work-around for avr-gcc 4.3.0 OSX version bug
+// Restore the registers that the compiler misses
+  asm volatile(
+    "pop r27 \n\t"
+    "pop r26 \n\t"
+    "pop r23 \n\t"
+    "pop r22 \n\t"
+    "pop r21 \n\t"
+    "pop r20 \n\t"
+    "pop r19 \n\t"
+    "pop r18 \n\t"
+    ::);
+#endif
+}
+
+uint8_t CandleSoftwareSerial::rx_pin_read()
+{
+  return *_receivePortRegister & _receiveBitMask;
+}
+
+inline void CandleSoftwareSerial::handle_interrupt()
+{
+  if (active_object)
+  {
+    active_object->recv();
+  }
+}
+
+#if defined(PCINT0_vect)
+ISR(PCINT0_vect)
+{
+  CandleSoftwareSerial::handle_interrupt();
+}
+#endif
+
+#if defined(PCINT1_vect)
+ISR(PCINT1_vect, ISR_ALIASOF(PCINT0_vect));
+#endif
+
+#if defined(PCINT2_vect)
+ISR(PCINT2_vect, ISR_ALIASOF(PCINT0_vect));
+#endif
+
+#if defined(PCINT3_vect)
+ISR(PCINT3_vect, ISR_ALIASOF(PCINT0_vect));
+#endif
+
+CandleSoftwareSerial::CandleSoftwareSerial(uint8_t receivePin, uint8_t transmitPin, bool inverse_logic) : 
+  _rx_delay_centering(0),
+  _rx_delay_intrabit(0),
+  _rx_delay_stopbit(0),
+  _tx_delay(0),
+  _buffer_overflow(false),
+  _inverse_logic(inverse_logic)
+{
+  setTX(transmitPin);
+  setRX(receivePin);
+}
+
+CandleSoftwareSerial::~CandleSoftwareSerial()
+{
+  end();
+}
+
+void CandleSoftwareSerial::setTX(uint8_t tx)
+{
+  digitalWrite(tx, _inverse_logic ? LOW : HIGH);
+  pinMode(tx, OUTPUT);
+  _transmitBitMask = digitalPinToBitMask(tx);
+  uint8_t port = digitalPinToPort(tx);
+  _transmitPortRegister = portOutputRegister(port);
+}
+
+void CandleSoftwareSerial::setRX(uint8_t rx)
+{
+  pinMode(rx, INPUT);
+  if (!_inverse_logic)
+    digitalWrite(rx, HIGH);  // pullup for normal logic!
+  _receivePin = rx;
+  _receiveBitMask = digitalPinToBitMask(rx);
+  uint8_t port = digitalPinToPort(rx);
+  _receivePortRegister = portInputRegister(port);
+}
+
+uint16_t CandleSoftwareSerial::subtract_cap(uint16_t num, uint16_t sub) {
+  if (num > sub)
+    return num - sub;
+  else
+    return 1;
+}
+
+void CandleSoftwareSerial::begin(long speed)
+{
+  _rx_delay_centering = _rx_delay_intrabit = _rx_delay_stopbit = _tx_delay = 0;
+  uint16_t bit_delay = (F_CPU / speed) / 4;
+  _tx_delay = subtract_cap(bit_delay, 15 / 4);
+
+  // Only setup rx when we have a valid PCINT for this pin
+  if (digitalPinToPCICR((int8_t)_receivePin)) {
+    #if GCC_VERSION > 40800
+    _rx_delay_centering = subtract_cap(bit_delay / 2, (4 + 4 + 75 + 17 - 23) / 4);
+    _rx_delay_intrabit = subtract_cap(bit_delay, 23 / 4);
+    _rx_delay_stopbit = subtract_cap(bit_delay * 3 / 4, (37 + 11) / 4);
+    #else // Timings counted from gcc 4.3.2 output
+    _rx_delay_centering = subtract_cap(bit_delay / 2, (4 + 4 + 97 + 29 - 11) / 4);
+    _rx_delay_intrabit = subtract_cap(bit_delay, 11 / 4);
+    _rx_delay_stopbit = subtract_cap(bit_delay * 3 / 4, (44 + 17) / 4);
+    #endif
+    *digitalPinToPCICR((int8_t)_receivePin) |= _BV(digitalPinToPCICRbit(_receivePin));
+    _pcint_maskreg = digitalPinToPCMSK(_receivePin);
+    _pcint_maskvalue = _BV(digitalPinToPCMSKbit(_receivePin));
+    tunedDelay(_tx_delay); // if we were low this establishes the end
+  }
+  listen();
+}
+
+void CandleSoftwareSerial::setRxIntMsk(bool enable)
+{
+    if (enable)
+      *_pcint_maskreg |= _pcint_maskvalue;
+    else
+      *_pcint_maskreg &= ~_pcint_maskvalue;
+}
+
+void CandleSoftwareSerial::end()
+{
+  stopListening();
+}
+
+
+// Read data from buffer
+int CandleSoftwareSerial::read()
+{
+  if (!isListening())
+    return -1;
+
+  // Empty buffer?
+  if (_receive_buffer_head == _receive_buffer_tail)
+    return -1;
+
+  // Read from "head"
+  uint8_t d = _receive_buffer[_receive_buffer_head]; // grab next byte
+  _receive_buffer_head = (_receive_buffer_head + 1) % _SS_MAX_RX_BUFF;
+  return d;
+}
+
+int CandleSoftwareSerial::available()
+{
+  if (!isListening())
+    return 0;
+
+  return (_receive_buffer_tail + _SS_MAX_RX_BUFF - _receive_buffer_head) % _SS_MAX_RX_BUFF;
+}
+
+size_t CandleSoftwareSerial::write(uint8_t b)
+{
+  if (_tx_delay == 0) {
+    setWriteError();
+    return 0;
+  }
+
+  volatile uint8_t *reg = _transmitPortRegister;
+  uint8_t reg_mask = _transmitBitMask;
+  uint8_t inv_mask = ~_transmitBitMask;
+  uint8_t oldSREG = SREG;
+  bool inv = _inverse_logic;
+  uint16_t delay = _tx_delay;
+
+  if (inv)
+    b = ~b;
+
+  cli();  // turn off interrupts for a clean txmit
+
+  // Write the start bit
+  if (inv)
+    *reg |= reg_mask;
+  else
+    *reg &= inv_mask;
+
+  tunedDelay(delay);
+
+  // Write each of the 8 bits
+  for (uint8_t i = 8; i > 0; --i)
+  {
+    if (b & 1) // choose bit
+      *reg |= reg_mask; // send 1
+    else
+      *reg &= inv_mask; // send 0
+
+    tunedDelay(delay);
+    b >>= 1;
+  }
+
+  // restore pin to natural state
+  if (inv)
+    *reg &= inv_mask;
+  else
+    *reg |= reg_mask;
+
+  SREG = oldSREG; // turn interrupts back on
+  tunedDelay(_tx_delay);
+  
+  return 1;
+}
+
+int CandleSoftwareSerial::peek()
+{
+  if (!isListening())
+    return -1;
+
+  // Empty buffer?
+  if (_receive_buffer_head == _receive_buffer_tail)
+    return -1;
+
+  // Read from "head"
+  return _receive_buffer[_receive_buffer_head];
+}
+
+
+
+
+/*
+ * 
+ * The MySensors Arduino library handles the wireless radio link and protocol
+ * between your home built sensors/actuators and HA controller of choice.
+ * The sensors forms a self healing radio network with optional repeaters. Each
+ * repeater and gateway builds a routing tables in EEPROM which keeps track of the
+ * network topology allowing messages to be routed to nodes.
+ *
+ * Created by Henrik Ekblad <henrik.ekblad@mysensors.org>
+ * Copyright (C) 2013-2015 Sensnology AB
+ * Full contributor list: https://github.com/mysensors/Arduino/graphs/contributors
+ *
+ * Documentation: http://www.mysensors.org
+ * Support Forum: http://forum.mysensors.org
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
+ * 
+ */
+
+ 
+
+/*
+ * To deal with a strange issue with the software serial buffer, 
+ * currently the entire software serial code is inside this sketch.
+ * 
+SoftwareSerial.h (formerly NewSoftSerial.h) - 
+Multi-instance software serial library for Arduino/Wiring
+-- Interrupt-driven receive and other improvements by ladyada
+   (http://ladyada.net)
+-- Tuning, circular buffer, derivation from class Print/Stream,
+   multi-instance support, porting to 8MHz processors,
+   various optimizations, PROGMEM delay tables, inverse logic and 
+   direct port writing by Mikal Hart (http://www.arduiniana.org)
+-- Pin change interrupt macros by Paul Stoffregen (http://www.pjrc.com)
+-- 20MHz processor support by Garrett Mace (http://www.macetech.com)
+-- ATmega1280/2560 support by Brett Hagman (http://www.roguerobotics.com/)
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+The latest version of this library can always be found at
+http://arduiniana.org.
+*/
