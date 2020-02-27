@@ -79,3 +79,6 @@ It is highly recommended to attach an Open Smart touch screen. This allows you t
 With different settings it can copy and replay infrared signals instead.
 
 
+### Candle receiver
+
+This is the gateway that plugs into your Raspberry Pi. It sets up the connection with the other devices.
