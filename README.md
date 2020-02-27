@@ -1,5 +1,7 @@
 # Devices
-This is the code for the Candle smart home devices.
+This is the code for the Candle smart home devices. See:
+
+https://www.candlesmarthome.com/devices for more details.
 
 All Candle devices allow you to easily toggle whether they are allowed to send sensitive data to the central controller.
 
