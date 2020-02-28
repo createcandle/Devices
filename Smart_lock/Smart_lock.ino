@@ -2,18 +2,20 @@
  * DESCRIPTION
  * 
  * This device can toggle two relays, and thus two electric locks. These relays can be controlled via the Candle Controller, but also via SMS (if you want).
- * The SMS function is password protected: you have to send a password to switch the relay. Access can also be limited to only certain mobile phone numbers.
+ * The SMS function is password protected: you have to send a password to switch the relay. Access can also be limited to only certain mobile phone numbers, and only certain moments (by toggling the Mobile control switch).
  * 
- * If you send an SMS without the password, it will be shown as the Incoming SMS. Thiscan be used to automate other things in your home. For example, you could create a rule that when the system receices an SMS with "purifier on" in it, the air purifier will turn on.
+ * If you send an SMS without the password, it will be shown as the Incoming SMS. This can be used to automate other things in your home. For example, you could create a rule that when the system receices an SMS with "purifier on" in it, the air purifier will turn on.
  * 
  * This way you can control smart devices in your home even if it/Candle is not connected to the internet.
+ * 
+ * If data transmission is disabled, you can change the state of the lock via SMS or the pushbutton without the new state being sent to the controller.
  * 
  * SETTINGS */ 
 
 // It's important to change these to your own phone number(s). When the device starts up it will always start with these values.
 // You will also be able to change this via your controller later, but in case no connection to the controller can be established it's a good idea to enter your phonenumber here.
-char phone1[15] = "612345678";                      // Phone number of user #1. This is the main number to which status updates will be sent.
-char phone2[15] = "612345678";                      // Phone number of user #2 (optional). If there is no second user, set it the same number as user #1.
+char phone1[15] = "+031612345678";                  // Phone number of user #1. This is the main number to which status updates will be sent.
+char phone2[15] = "+031612345678";                  // Phone number of user #2 (optional). If there is no second user, set it the same number as user #1.
 
 char rotatingPassword1[26] = "door1";               // Door 1 password. If the device is powered up and can't reconnect to the home network, then this will be the fallback password. Maximum length is 25 characters.
 #define DOOR1_SELF_LOCKING                          // Self locking? Should door number one automatically re-lock itself after a short amount of time?
@@ -35,9 +37,9 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
  * APN: internet
  * No username or password are required, so they can be empty.
  */
-#define APN_URL "internet"                // The APN URL from your mobile provider.
-#define APN_USERNAME ""                         // The APN username from your mobile provider.
-#define APN_PASSWORD ""                         // The APN password from your moble provider.
+#define APN_URL "internet"                          // The APN URL from your mobile provider.
+#define APN_USERNAME ""                             // The APN username from your mobile provider.
+#define APN_PASSWORD ""                             // The APN password from your moble provider.
 
 //#define SEND_SMS_EVERY_49_DAYS                    // Send SMS every 49 days. If you are using a prepaid simcard, you may have to send an SMS once in a while to stop your simcard from getting disabled. This function tries sending an SMS to you once every 49 days.
 
@@ -122,13 +124,10 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 #endif
 
 
-// Allow the smart lock to send you an SMS once every 49 days? It's better to let your controller trigger this, but it's a nice option to have.
-// #define SEND_SMS_EVERY_49_DAYS                   // This can help keep the simcard 'alive'. The first sms will be sent a week after the smart lock powers on.
-
 // THESE VALUES CAN BE CHANGED
 
 #define LOOP_DURATION 1000                          // The main loop runs every x milliseconds. This main loop starts the modem, and from then on periodically requests the password.
-#define SECONDS_BETWEEN_HEARTBEAT_TRANSMISSION 240  // The smart lock might not send any data for a very long time if it isn't used. Sending a heartbeat tells the controller: I'm still there.
+#define SECONDS_BETWEEN_HEARTBEAT_TRANSMISSION 120  // The smart lock might not send any data for a very long time if it isn't used. Sending a heartbeat tells the controller: I'm still there.
 #define MAXIMUMTIMEOUTS 30                          // How often the network may fail before we conclude there is a connection problem.
 
 #define LOCKED 1                                    // This makes it easier to understand what the code is doing. It allows the code to say "LOCKED" instead of "1".
@@ -148,7 +147,6 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 // Software serial
 #define _SS_MAX_RX_BUFF 255                         // The size of the software serial buffer
 #define SERIAL_LINE_LENGTH 128                      // The maximum length that a line from the GSM modem can be.
-//#define _SS_MAX_RX_BUFF 255
 //#include <SoftwareSerial.h>                       // A software library for serial communication. In this case we use it to talk to the GSM modem. Currently not used because of a strange issue.
 //SoftwareSerial modem(GSM_RECEIVE_PIN,GSM_TRANSMIT_PIN); // Receive pin (RX), transmit pin (TX)
 
@@ -156,7 +154,7 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 
 
 //
-//  The entire software serial library is now meshed into this code. This is because there was a strange issue where the incoming buffer length could not be changed.
+//  The entire software serial library is now meshed into this code. This is because there was a strange issue where the incoming buffer length could not be changed with a #define.
 //
 #ifndef CandleSoftwareSerial_h
 #define CandleSoftwareSerial_h
@@ -426,7 +424,7 @@ void send_values()
   send(relay_message.setSensor(TRANSMISSION_STATE_CHILD_ID).set(transmission_state),1);
   send(relay_message.setSensor(SMS_CONTROL_ID).set(sms_control_state),1);
 
-  if(transmission_state){                           // Send the state of the locks (if data transmission is allowed)
+  if( transmission_state ){                           // Send the state of the locks (if data transmission is allowed)
     for( byte i = 0; i < DOOR_COUNT; i++ ){
       send(lock_message.setSensor(RELAY1_CHILD_ID + i).set( actualDoorStates[i] )); wait(RADIO_DELAY);
     }
@@ -530,9 +528,13 @@ void loop()
 
     Serial.print(F("Sending new transmission state: ")); Serial.println(transmission_state);
     //controller_got_transmission_state = false;
-    send(relay_message.setSensor(TRANSMISSION_STATE_CHILD_ID).set(transmission_state),1); // We acknowledge to the controller that we are now in the new state.
-    wait(RADIO_DELAY);
-
+    if( transmission_state ){
+      send_values();                                // If data transmissin is re-enabled, all current values (including the real state of the locks) are sent to the controller.
+    }
+    else {
+      send(relay_message.setSensor(TRANSMISSION_STATE_CHILD_ID).set(transmission_state),1); wait(RADIO_DELAY); // We acknowledge to the controller that we are now in the new state.
+    }
+    
   }
 
   // User initiated a SMS control change remotely
@@ -755,8 +757,10 @@ void loop()
       Serial.print(F("new desired state: ")); Serial.println(desired_door_states[checkingDoor]);
 #endif
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-      send(lock_message.setSensor(RELAY1_CHILD_ID + checkingDoor).set( desired_door_states[checkingDoor] )); wait(RADIO_DELAY); // Tell the controller in what state the lock is.
-      send(text_message.setSensor(DEVICE_STATUS_ID).set( updateMessage )); wait(RADIO_DELAY);
+      if( transmission_state ){
+        send(lock_message.setSensor(RELAY1_CHILD_ID + checkingDoor).set( desired_door_states[checkingDoor] )); wait(RADIO_DELAY); // Tell the controller in what state the lock is.
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( updateMessage )); wait(RADIO_DELAY);
+      }
 #endif
       actualDoorStates[checkingDoor] = desired_door_states[checkingDoor];
       EEPROM.update(EEPROM_STORAGE_START + RELAY1_CHILD_ID + checkingDoor, desired_door_states[checkingDoor]); // Store the new position in eeprom. After a reboot it will automatically jump back to this state.
@@ -794,7 +798,9 @@ void loop()
     if(buttonBeingPressed == 0){
       desired_door_states[0] = !desired_door_states[0]; // On press of the button, toggle the door 1 desired status. e.g. locked -> unlocked.
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 1 pressed") ));
+      if( transmission_state ){
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 1 pressed") ));
+      }
 #endif
       Serial.print(F("Button1->")); Serial.println(desired_door_states[0]);
     }
@@ -806,7 +812,9 @@ void loop()
     if(buttonBeingPressed == 0){
       desired_door_states[1] = !desired_door_states[1]; // On press of the button, toggle the door 2 desired status. e.g. locked -> unlocked.
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 2 pressed") ));
+      if( transmission_state ){
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 2 pressed") ));
+      }
 #endif
       Serial.print(F("Button2->")); Serial.println(desired_door_states[1]);
     }
@@ -965,8 +973,10 @@ void processLine()
       //while ( i-- ) *( tempLine + i ) = *( serial_line + i ); // Copying characters from serial_line variable into a new one.
       //send(text_message.setSensor(SMS_CHILD_ID).set(tempLine)); wait(RADIO_DELAY);
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-      serial_line[24] = '\0';
-      send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+      if( transmission_state ){
+        serial_line[24] = '\0';
+        send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+      }
 #endif
     }
     Serial.println(F("Deleting SMS message"));
@@ -986,23 +996,27 @@ void processLine()
     else if( !strncmp(serial_line, "+CMS ERR", 8) ){    // Counter intuitively, if the string matches, the result is 0. In this case, the modem tells us there is an error. After an attempt to send an SMS, this could indicate a lack of network connection or lack of funds.
       Serial.println(F("GSM ERROR (no network or funds?)"));
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-      serial_line[24] = '\0';
-      Serial.println(serial_line);
-      send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
-      wait(1000);
-      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM network error (CMS)") )); wait(RADIO_DELAY);
-      wait(2000);
-      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Check funds or phone #1") )); wait(RADIO_DELAY);
+        if( transmission_state ){
+        serial_line[24] = '\0';
+        Serial.println(serial_line);
+        send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+        wait(1000);
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM network error (CMS)") )); wait(RADIO_DELAY);
+        wait(2000);
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Check funds or phone #1") )); wait(RADIO_DELAY);
+      }
 #endif
     }
 
     else if( !strncmp(serial_line, "+CME ERR", 8) ){    // This error could occus if a user sends an incorrect code to their mobile provider
       Serial.println(F("GSM ERROR (incorrect code sent?)"));
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-      serial_line[24] = '\0';
-      send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
-      //send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM error (CME)") )); wait(RADIO_DELAY);
-      //wait(1000);
+      if( transmission_state ){
+        serial_line[24] = '\0';
+        send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+        //send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM error (CME)") )); wait(RADIO_DELAY);
+        //wait(1000);
+      }
 #endif
     }
 
@@ -1045,7 +1059,9 @@ void processLine()
           Serial.println(work_string);
 #endif
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-          send(text_message.setSensor(DEVICE_STATUS_ID).set( work_string )); wait(RADIO_DELAY);
+          if( transmission_state ){
+            send(text_message.setSensor(DEVICE_STATUS_ID).set( work_string )); wait(RADIO_DELAY);
+          }
 #endif
           wait(2000);                                 // Allows the user to read the response more easily if it has multiple lines.
         }
@@ -1089,10 +1105,10 @@ void processLine()
       Serial.print(F("phone#2 to check against = ")); Serial.println(phone2);
 #endif
       
-      //char * p;
-      //char * q;
-      byte p;
-      byte q;      
+      char * p;
+      char * q;
+      //byte p;
+      //byte q;      
       p = strstr (serial_line, phone1);            // At what position in the serial_line have we spotted the phone number? If it is 0 this means it has not been found.
       q = strstr (serial_line, phone2);
       if (p || q) {                               // If one of the phone numbers was found in the string, then one of these will be bigger than 0.
@@ -1102,14 +1118,7 @@ void processLine()
         Serial.print(F("Buffer still available: ")); Serial.println( modem.available() );
 #endif
         return;
-        /*
-        if (p){
-          send(text_message.setSensor(DEVICE_STATUS_ID).set( phone1 )); wait(RADIO_DELAY); // Tell the controller which phone number just sent us an SMS.
-        }
-        else{
-          send(text_message.setSensor(DEVICE_STATUS_ID).set( phone2 )); wait(RADIO_DELAY); // Tell the controller which phone number just sent us an SMS.
-        }
-        */
+
         //char foundNumber[15];
         //memcpy( foundNumber, &serial_line[8], 10 ); // Starts at position 10 in the serial_line and then copies 12 characters
       }
@@ -1145,13 +1154,17 @@ void receive(const MyMessage &message)
 #endif
 
   if (message.isAck()) {
+#ifdef DEBUG
     Serial.println(F("- Echo"));
+#endif
   }
   else if (message.type == V_LOCK_STATUS) {       // Change lock state  
     desired_door_states[message.sensor - RELAY1_CHILD_ID] = message.getBool()?RELAY_LOCKED:RELAY_UNLOCKED;
     Serial.print(F("Controller -> door ")); Serial.print(message.sensor - RELAY1_CHILD_ID); Serial.print(F(" -> ")); Serial.println(desired_door_states[message.sensor - RELAY1_CHILD_ID]);
 
-    send(lock_message.setSensor(message.sensor).set( message.getBool() )); // Tell the controller that the value was received.
+    if( !transmission_state ){ // We only echo this state back to the controller straight from the receive function if the main loop won't update the controller because the data transmission is disabled.
+      send(lock_message.setSensor(message.sensor).set( message.getBool() )); // Tell the controller that the value was received.
+    }
   }
   else if (message.type == V_STATUS) {
 
@@ -1323,7 +1336,7 @@ void sendSMS()
     else if( phone1[0] == 43 || phone1[0] == 48 ){ // The numbers 43 and 48 are the ascii codes for + and 0 respectively
       Serial.println(F("Using phone #1"));
 
-      modem.print("AT+CMGS=\""); modem.print(phone1); modem.println("\"\r");
+      modem.print(F("AT+CMGS=\"")); modem.print(phone1); modem.println(F("\"\r"));
       wait(200);
       //modem.print("test message from A6");
 
@@ -1372,7 +1385,9 @@ void sendSMS()
     else{
       Serial.println(F("No good phone number set, so cannot send SMS"));
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-      send(text_message.setSensor(DEVICE_STATUS_ID).set( F("No phone number 1"))); wait(RADIO_DELAY);
+      if( transmission_state ){
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("No phone number 1"))); wait(RADIO_DELAY);
+      }
 #endif
     }
 
@@ -1386,7 +1401,7 @@ void sendSMS()
   }
 #ifdef DEBUG
   else{
-    Serial.println(F("Will not send this SMS (busy)"));
+    Serial.println(F("Will/can not send this SMS"));
   }
 #endif
 }
