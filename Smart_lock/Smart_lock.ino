@@ -159,8 +159,8 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 #ifndef CandleSoftwareSerial_h
 #define CandleSoftwareSerial_h
 
-#include <inttypes.h>
-#include <Stream.h>
+#include <inttypes.h>                               // "Grove - Barometer Sensor BME280". A quick fix to get the Candle manager to install this library.
+#include <Stream.h>                                 // "Grove - Barometer Sensor BME280". A quick fix to get the Candle manager to install this library.
 
 #ifndef _SS_MAX_RX_BUFF
 #define _SS_MAX_RX_BUFF 200 // RX buffer size
