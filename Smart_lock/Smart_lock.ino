@@ -1,4 +1,4 @@
- /*
+/*
  * DESCRIPTION
  * 
  * This device can toggle two relays, and thus two electric locks. These relays can be controlled via the Candle Controller, but also via SMS (if you want).
@@ -37,15 +37,15 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
  * APN: internet
  * No username or password are required, so they can be empty.
  */
-#define APN_URL "internet"                          // The APN URL from your mobile provider.
-#define APN_USERNAME ""                             // The APN username from your mobile provider.
-#define APN_PASSWORD ""                             // The APN password from your moble provider.
+#define APN_URL "internet"                          // APN Name. The APN URL from your mobile provider. Check your provider website for the precise settings.
+#define APN_USERNAME ""                             // APN Login. The APN username from your mobile provider. You can try leaving this and the password empty.
+#define APN_PASSWORD ""                             // APN Password. The APN password from your mobile provider.
 
 //#define SEND_SMS_EVERY_49_DAYS                    // Send SMS every 49 days. If you are using a prepaid simcard, you may have to send an SMS once in a while to stop your simcard from getting disabled. This function tries sending an SMS to you once every 49 days.
 
 #define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the network? For privacy or security reasons you may prefer a stand-alone device. If you do allow the device to connect, you can connect a button to switch the transmission of data or off.
 
-#define RF_NANO                                   // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
 
 /* END OF SETTINGS
@@ -55,9 +55,9 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
  *  
 */
 
-//#define DEBUG                                       // Display debug information in the serial output.
+//#define DEBUG                                     // Display debug information in the serial output.
 //#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
-//#define JESSE                                       // Enables the special features for Jesse Howard's Candle prototypes.
+//#define JESSE                                     // Enables the special features for Jesse Howard's Candle prototypes.
 
 
 // Enable and select the attached radio type
@@ -173,65 +173,65 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 
 class CandleSoftwareSerial : public Stream
 {
-private:
-  // per object data
-  uint8_t _receivePin;
-  uint8_t _receiveBitMask;
-  volatile uint8_t *_receivePortRegister;
-  uint8_t _transmitBitMask;
-  volatile uint8_t *_transmitPortRegister;
-  volatile uint8_t *_pcint_maskreg;
-  uint8_t _pcint_maskvalue;
-
-  // Expressed as 4-cycle delays (must never be 0!)
-  uint16_t _rx_delay_centering;
-  uint16_t _rx_delay_intrabit;
-  uint16_t _rx_delay_stopbit;
-  uint16_t _tx_delay;
-
-  uint16_t _buffer_overflow:1;
-  uint16_t _inverse_logic:1;
-
-  // static data
-  static uint8_t _receive_buffer[_SS_MAX_RX_BUFF]; 
-  static volatile uint8_t _receive_buffer_tail;
-  static volatile uint8_t _receive_buffer_head;
-  static CandleSoftwareSerial *active_object;
-
-  // private methods
-  inline void recv() __attribute__((__always_inline__));
-  uint8_t rx_pin_read();
-  void setTX(uint8_t transmitPin);
-  void setRX(uint8_t receivePin);
-  inline void setRxIntMsk(bool enable) __attribute__((__always_inline__));
-
-  // Return num - sub, or 1 if the result would be < 1
-  static uint16_t subtract_cap(uint16_t num, uint16_t sub);
-
-  // private static method for timing
-  static inline void tunedDelay(uint16_t delay);
-
-public:
-  // public methods
-  CandleSoftwareSerial(uint8_t receivePin, uint8_t transmitPin, bool inverse_logic = false);
-  ~CandleSoftwareSerial();
-  void begin(long speed);
-  bool listen();
-  void end();
-  bool isListening() { return this == active_object; }
-  bool stopListening();
-  bool overflow() { bool ret = _buffer_overflow; if (ret) _buffer_overflow = false; return ret; }
-  int peek();
-
-  virtual size_t write(uint8_t byte);
-  virtual int read();
-  virtual int available();
-  operator bool() { return true; }
+  private:
+    // per object data
+    uint8_t _receivePin;
+    uint8_t _receiveBitMask;
+    volatile uint8_t *_receivePortRegister;
+    uint8_t _transmitBitMask;
+    volatile uint8_t *_transmitPortRegister;
+    volatile uint8_t *_pcint_maskreg;
+    uint8_t _pcint_maskvalue;
   
-  using Print::write;
-
-  // public only for easy access by interrupt handlers
-  static inline void handle_interrupt() __attribute__((__always_inline__));
+    // Expressed as 4-cycle delays (must never be 0!)
+    uint16_t _rx_delay_centering;
+    uint16_t _rx_delay_intrabit;
+    uint16_t _rx_delay_stopbit;
+    uint16_t _tx_delay;
+  
+    uint16_t _buffer_overflow:1;
+    uint16_t _inverse_logic:1;
+  
+    // static data
+    static uint8_t _receive_buffer[_SS_MAX_RX_BUFF]; 
+    static volatile uint8_t _receive_buffer_tail;
+    static volatile uint8_t _receive_buffer_head;
+    static CandleSoftwareSerial *active_object;
+  
+    // private methods
+    inline void recv() __attribute__((__always_inline__));
+    uint8_t rx_pin_read();
+    void setTX(uint8_t transmitPin);
+    void setRX(uint8_t receivePin);
+    inline void setRxIntMsk(bool enable) __attribute__((__always_inline__));
+  
+    // Return num - sub, or 1 if the result would be < 1
+    static uint16_t subtract_cap(uint16_t num, uint16_t sub);
+  
+    // private static method for timing
+    static inline void tunedDelay(uint16_t delay);
+  
+  public:
+    // public methods
+    CandleSoftwareSerial(uint8_t receivePin, uint8_t transmitPin, bool inverse_logic = false);
+    ~CandleSoftwareSerial();
+    void begin(long speed);
+    bool listen();
+    void end();
+    bool isListening() { return this == active_object; }
+    bool stopListening();
+    bool overflow() { bool ret = _buffer_overflow; if (ret) _buffer_overflow = false; return ret; }
+    int peek();
+  
+    virtual size_t write(uint8_t byte);
+    virtual int read();
+    virtual int available();
+    operator bool() { return true; }
+    
+    using Print::write;
+  
+    // public only for easy access by interrupt handlers
+    static inline void handle_interrupt() __attribute__((__always_inline__));
 };
 
 #endif // candleserial.h
@@ -456,7 +456,7 @@ void setup()
 
   
   // Has a connection to the controller been established?
-  if(isTransportReady()){
+  if( isTransportReady() ){
     Serial.println(F("Connected to gateway"));
     send(text_message.setSensor(DEVICE_STATUS_ID).set( F("STARTING GSM"))); wait(RADIO_DELAY); 
   }else{
@@ -706,7 +706,7 @@ void loop()
   //  MAIN LOOP
   //
 
-  if (millis() - last_loop_time > LOOP_DURATION) { // Runs every second
+  if( millis() - last_loop_time > LOOP_DURATION ){ // Runs every second
     last_loop_time = millis();
 
     wdt_reset();                                  // Reset the watchdog timer. If this doesn't happen, the device must have crashed, and it will be automatically rebooted by the watchdog.
@@ -832,8 +832,6 @@ void loop()
   //
   
   if( modem.available() > 0 ){
-
-
     
     char singleChar = modem.read();
 #ifdef DEBUG
@@ -1153,12 +1151,12 @@ void receive(const MyMessage &message)
   Serial.print(F("->receiving message for child ")); Serial.println(message.sensor);
 #endif
 
-  if (message.isAck()) {
+  if( message.isAck() ){
 #ifdef DEBUG
     Serial.println(F("- Echo"));
 #endif
   }
-  else if (message.type == V_LOCK_STATUS) {       // Change lock state  
+  else if( message.type == V_LOCK_STATUS ){       // Change lock state  
     desired_door_states[message.sensor - RELAY1_CHILD_ID] = message.getBool()?RELAY_LOCKED:RELAY_UNLOCKED;
     Serial.print(F("Controller -> door ")); Serial.print(message.sensor - RELAY1_CHILD_ID); Serial.print(F(" -> ")); Serial.println(desired_door_states[message.sensor - RELAY1_CHILD_ID]);
 
@@ -1166,7 +1164,7 @@ void receive(const MyMessage &message)
       send(lock_message.setSensor(message.sensor).set( message.getBool() )); // Tell the controller that the value was received.
     }
   }
-  else if (message.type == V_STATUS) {
+  else if( message.type == V_STATUS ){
 
     send(relay_message.setSensor(message.sensor).set( message.getBool() ));
     
@@ -1181,21 +1179,21 @@ void receive(const MyMessage &message)
       Serial.print(F("-New desired sms control state: ")); Serial.println(desired_sms_control_state);
     }
   }
-  else if (message.type == V_TEXT) {
+  else if( message.type == V_TEXT ){
 
     Serial.print(F("- incoming string: "));Serial.println(message.getString());
     send(text_message.setSensor(message.sensor).set( message.getString() )); // Tell the controller that the value was received.
 
 
     // If the controller asks us to send an SMS.
-    if(message.sensor == SENDSMS_CHILD_ID){
+    if( message.sensor == SENDSMS_CHILD_ID ){
       //strcpy(smsToSend, message.getString());
       strcpy(work_string, message.getString());
       send_sms = true;
       //send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Sending SMS...")));
     }
 
-    if(message.sensor == ROTATING_PASSWORD1_ID){
+    if( message.sensor == ROTATING_PASSWORD1_ID ){
       if( rotatingPassword1 != message.getString() ){
         strcpy(rotatingPassword1, message.getString());
         Serial.print(F("Rotating password 1 is now: ")); Serial.println(rotatingPassword1);
@@ -1203,7 +1201,7 @@ void receive(const MyMessage &message)
         //send(text_message.setSensor(DEVICE_STATUS_ID).set( F("received latest password 1"))); wait(RADIO_DELAY);
       }
     }
-    else if(message.sensor == ROTATING_PASSWORD2_ID){
+    else if( message.sensor == ROTATING_PASSWORD2_ID ){
       if( rotatingPassword2 != message.getString() ){
         strcpy( rotatingPassword2, message.getString());
         Serial.print(F("Rotating password 2 is now: ")); Serial.println(rotatingPassword2);
@@ -1213,7 +1211,7 @@ void receive(const MyMessage &message)
     }
     
     // Receiving the (parts of) phonenumbers that are allowed to operate the smart lock.
-    else if(message.sensor == PHONENUMBER1_ID){
+    else if( message.sensor == PHONENUMBER1_ID ){
       strcpy(phone1, message.getString());
       store_to_eeprom = true;
       Serial.println(F("received phone #1 ")); 
@@ -1221,7 +1219,7 @@ void receive(const MyMessage &message)
       Serial.print(F("phone1: ")); Serial.println(phone1);
 #endif
     }
-    else if(message.sensor == PHONENUMBER2_ID){
+    else if( message.sensor == PHONENUMBER2_ID ){
       //if( sizeof(message.getString()) > 2 ){
       strcpy(phone2, message.getString());
       store_to_eeprom = true; 
@@ -1743,7 +1741,7 @@ void CandleSoftwareSerial::begin(long speed)
   _tx_delay = subtract_cap(bit_delay, 15 / 4);
 
   // Only setup rx when we have a valid PCINT for this pin
-  if (digitalPinToPCICR((int8_t)_receivePin)) {
+  if(digitalPinToPCICR((int8_t)_receivePin)) {
     #if GCC_VERSION > 40800
     _rx_delay_centering = subtract_cap(bit_delay / 2, (4 + 4 + 75 + 17 - 23) / 4);
     _rx_delay_intrabit = subtract_cap(bit_delay, 23 / 4);
