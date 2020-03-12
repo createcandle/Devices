@@ -24,7 +24,7 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 
 #define SELF_LOCKING_DELAY 5                        // Self locking delay. If a door is self-locking, how many seconds before it should re-lock?
 
-#define HAS_BUTTONS                                 // Have you attached buttons? You can toggle the state of each lock with a push button if you want. If you want this feature, even if you only want it for one, you have to attach two buttons, one for each door.
+//#define HAS_BUTTONS                                 // Have you attached buttons? You can toggle the state of each lock with a push button if you want. If you want this feature, even if you only want it for one, you have to attach two buttons, one for each door.
 
 /*
  * LYCAMOBILE
