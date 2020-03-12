@@ -40,7 +40,7 @@ http://arduiniana.org.
 ******************************************************************************/
 
 #ifndef _SS_MAX_RX_BUFF
-#define _SS_MAX_RX_BUFF 128 // RX buffer size
+#define _SS_MAX_RX_BUFF 255 // RX buffer size
 #endif
 
 #ifndef GCC_VERSION
