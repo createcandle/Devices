@@ -26,17 +26,6 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 
 //#define HAS_BUTTONS                                 // Have you attached buttons? You can toggle the state of each lock with a push button if you want. If you want this feature, even if you only want it for one, you have to attach two buttons, one for each door.
 
-/*
- * LYCAMOBILE
- * APN: data.lycamobile.nl
- * Username: lmnl
- * Password: plus
- * CUSD command to get phone number: *102#
- * 
- * LEBARA
- * APN: internet
- * No username or password are required, so they can be empty.
- */
 #define APN_URL "internet"                          // APN Name. The APN URL from your mobile provider. Check your provider website for the precise settings.
 #define APN_USERNAME ""                             // APN Login. The APN username from your mobile provider. You can try leaving this and the password empty.
 #define APN_PASSWORD ""                             // APN Password. The APN password from your mobile provider.
@@ -51,7 +40,15 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 /* END OF SETTINGS
  *  
  *  
+ * LYCAMOBILE
+ * APN: data.lycamobile.nl
+ * Username: lmnl
+ * Password: plus
+ * CUSD command to get phone number: *102#
  * 
+ * LEBARA
+ * APN: internet
+ * No username or password are required, so they can be empty.
  *  
 */
 
@@ -147,97 +144,9 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 // Software serial
 #define _SS_MAX_RX_BUFF 255                         // The size of the software serial buffer
 #define SERIAL_LINE_LENGTH 128                      // The maximum length that a line from the GSM modem can be.
-//#include <SoftwareSerial.h>                       // A software library for serial communication. In this case we use it to talk to the GSM modem. Currently not used because of a strange issue.
-//SoftwareSerial modem(GSM_RECEIVE_PIN,GSM_TRANSMIT_PIN); // Receive pin (RX), transmit pin (TX)
+#include <SoftwareSerial.h>                         // A software library for serial communication. In this case we use it to talk to the GSM modem. Currently not used because of a strange issue.
+SoftwareSerial modem(GSM_RECEIVE_PIN,GSM_TRANSMIT_PIN); // Receive pin (RX), transmit pin (TX)
 
-
-
-
-//
-//  The entire software serial library is now meshed into this code. This is because there was a strange issue where the incoming buffer length could not be changed with a #define.
-//
-#ifndef CandleSoftwareSerial_h
-#define CandleSoftwareSerial_h
-
-#include <inttypes.h>                               // "Grove - Barometer Sensor BME280". A quick fix to get the Candle manager to install this library.
-#include <Stream.h>                                 // "Grove - Barometer Sensor BME280". A quick fix to get the Candle manager to install this library.
-
-#ifndef _SS_MAX_RX_BUFF
-#define _SS_MAX_RX_BUFF 200 // RX buffer size
-#endif
-
-#ifndef GCC_VERSION
-#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#endif
-
-
-class CandleSoftwareSerial : public Stream
-{
-  private:
-    // per object data
-    uint8_t _receivePin;
-    uint8_t _receiveBitMask;
-    volatile uint8_t *_receivePortRegister;
-    uint8_t _transmitBitMask;
-    volatile uint8_t *_transmitPortRegister;
-    volatile uint8_t *_pcint_maskreg;
-    uint8_t _pcint_maskvalue;
-  
-    // Expressed as 4-cycle delays (must never be 0!)
-    uint16_t _rx_delay_centering;
-    uint16_t _rx_delay_intrabit;
-    uint16_t _rx_delay_stopbit;
-    uint16_t _tx_delay;
-  
-    uint16_t _buffer_overflow:1;
-    uint16_t _inverse_logic:1;
-  
-    // static data
-    static uint8_t _receive_buffer[_SS_MAX_RX_BUFF]; 
-    static volatile uint8_t _receive_buffer_tail;
-    static volatile uint8_t _receive_buffer_head;
-    static CandleSoftwareSerial *active_object;
-  
-    // private methods
-    inline void recv() __attribute__((__always_inline__));
-    uint8_t rx_pin_read();
-    void setTX(uint8_t transmitPin);
-    void setRX(uint8_t receivePin);
-    inline void setRxIntMsk(bool enable) __attribute__((__always_inline__));
-  
-    // Return num - sub, or 1 if the result would be < 1
-    static uint16_t subtract_cap(uint16_t num, uint16_t sub);
-  
-    // private static method for timing
-    static inline void tunedDelay(uint16_t delay);
-  
-  public:
-    // public methods
-    CandleSoftwareSerial(uint8_t receivePin, uint8_t transmitPin, bool inverse_logic = false);
-    ~CandleSoftwareSerial();
-    void begin(long speed);
-    bool listen();
-    void end();
-    bool isListening() { return this == active_object; }
-    bool stopListening();
-    bool overflow() { bool ret = _buffer_overflow; if (ret) _buffer_overflow = false; return ret; }
-    int peek();
-  
-    virtual size_t write(uint8_t byte);
-    virtual int read();
-    virtual int available();
-    operator bool() { return true; }
-    
-    using Print::write;
-  
-    // public only for easy access by interrupt handlers
-    static inline void handle_interrupt() __attribute__((__always_inline__));
-};
-
-#endif // candleserial.h
-
-
-CandleSoftwareSerial modem(GSM_RECEIVE_PIN,GSM_TRANSMIT_PIN); // Receive pin (RX), transmit pin (TX)
 
 
 char serial_line[SERIAL_LINE_LENGTH];                // Holds the line received from the modem.
@@ -260,13 +169,12 @@ char serial_line[SERIAL_LINE_LENGTH];                // Holds the line received 
 
 MyMessage text_message(DEVICE_STATUS_ID, V_TEXT);   // Sets up the message format that we'll be sending to the MySensors gateway later. The first part is the ID of the specific sensor module on this node. The second part tells the gateway what kind of data to expect.
 MyMessage relay_message(TRANSMISSION_STATE_CHILD_ID, V_STATUS); // A generic boolean state message.
-MyMessage lock_message(RELAY1_CHILD_ID, V_LOCK_STATUS); // A message to send the state of locks.
+MyMessage lock_message(RELAY1_CHILD_ID, V_STATUS); // A message to send the state of locks. Was 'V_LOCK_STATUS', but this is a currently a read-only property.
 
 
 // General variables
 #define DOOR_COUNT 2                                // How many electric locks are attached.
 #define RADIO_DELAY 100                             // Milliseconds delay betweeen radio signals. This gives the radio some breathing room.
-//byte timeOutCount = 0;                              // How often did we fail to the password after we requested it? If it's too often, then the connection is down.
 boolean incomingSMS = 0;                            // Used in flow control when processing an SMS.
 boolean waitingForResponse = false;                 // Used to check if the connection to the controller is ok. If we are still waiting by the next time a password is requested, something is fishy.
 boolean send_all_values = 1;
@@ -304,7 +212,7 @@ boolean desired_sms_control_state = true;
 boolean store_to_eeprom = false;
 boolean send_sms = false;
 
-
+#ifdef DEBUG
 // A small funtion that can tell you how much ram is left.
 int freeRam () {
   extern int __heap_start, *__brkval; 
@@ -312,7 +220,7 @@ int freeRam () {
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }
 // via https://playground.arduino.cc/Code/AvailableMemory
-
+#endif
 
 
 
@@ -361,16 +269,14 @@ void before()
   else{
     Serial.println(F("No preferences stored in internal memory yet"));
   }
-
-
-  
-  //digitalWrite(LED_PIN, HIGH);  
 }
+
+
 
 #ifdef ALLOW_CONNECTING_TO_NETWORK
 void presentation()
 {
-  sendSketchInfo(F("Smart lock"), F("1.7")); wait(RADIO_DELAY);
+  sendSketchInfo(F("Smart lock"), F("2.0")); wait(RADIO_DELAY);
 
   present(DEVICE_STATUS_ID, S_INFO, F("Status")); wait(RADIO_DELAY);
   present(SMS_CHILD_ID, S_INFO, F("Received SMS")); wait(RADIO_DELAY);
@@ -390,7 +296,7 @@ void presentation()
     
     work_string[6] = '\0'; // Shortens the string to just be "Door 1", "Door 2", etc.
     //Serial.println(work_string);
-    present(RELAY1_CHILD_ID + i, S_LOCK, work_string, true); wait(RADIO_DELAY);
+    present(RELAY1_CHILD_ID + i, S_BINARY, work_string, true); wait(RADIO_DELAY);
   }
 
   present(TRANSMISSION_STATE_CHILD_ID, S_BINARY, F("Data transmission")); wait(RADIO_DELAY);
@@ -598,7 +504,7 @@ void loop()
     modem_counter++;
     modem_state = WAITING_FOR_RESPONSE_FROM_MODEM;
     Serial.println();
-    Serial.print(F("__Boot step ")); Serial.println(modem_counter);
+    Serial.print(F("__GSM boot step ")); Serial.println(modem_counter);
 #ifdef ALLOW_CONNECTING_TO_NETWORK
     send(text_message.setSensor(DEVICE_STATUS_ID).set( (char) modem_counter ));
 #endif
@@ -860,18 +766,18 @@ void loop()
     
     
     if( (singleChar == 13 && peek_char == 10) || number_of_bytes_received == SERIAL_LINE_LENGTH ){ // Each line of text the modem sends ends with two special characters, the line feed (LF) and Carriage return (CR). We don't need those anymore.
-      Serial.print(F("Received a line with a length of ")); Serial.println(number_of_bytes_received);
+      //Serial.print(F("Received a line with a length of ")); Serial.println(number_of_bytes_received);
       serial_line[number_of_bytes_received] = '\0';
       number_of_bytes_received = 0;
-      Serial.println(serial_line);
-      Serial.print(F("  -to go: ")); Serial.println( modem.available() ); // After this line, how many more characters are there left in the buffer.
+      //Serial.println(serial_line);
+      //Serial.print(F("  -to go: ")); Serial.println( modem.available() ); // After this line, how many more characters are there left in the buffer.
       processLine();
     }
 
 
     if( modem.available() == 0 ){
       if( modem_state == MODEM_PROCESSING_RESPONSE && number_of_bytes_received == 0 ){
-        Serial.println(F("Response buffer processed"));
+        //Serial.println(F("Response buffer processed"));
         modem_state = MODEM_BUFFER_EMPTY;
       }
 #ifdef DEBUG
@@ -1475,7 +1381,7 @@ void storeToEeprom(char TheArray[], int n, int eeprom_starting_position)       /
     if( c != '\0'){           // After we find the zero that terminiates the string, we keep writing zeros to the rest of the eeprom storage location.
       c = TheArray[i];
     }
-    Serial.print(i); Serial.print(F("=")); Serial.println(c);
+    //Serial.print(i); Serial.print(F("=")); Serial.println(c);
     EEPROM.update(eeprom_starting_position + i, c);
   }
 }
@@ -1486,7 +1392,7 @@ void loadFromEeprom(char TheArray[], int n, int eeprom_starting_position)
   //Serial.println(F("loading from eeprom: "));
   for ( int i = 0; i < n; i++ ){
     TheArray[i] = EEPROM.read(eeprom_starting_position + i);
-    Serial.print(i); Serial.print(F("=")); Serial.println(TheArray[i]);
+    //Serial.print(i); Serial.print(F("=")); Serial.println(TheArray[i]);
   }
 }
 
@@ -1523,347 +1429,6 @@ void loadEverythingFromEeprom(){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#define _DEBUG 0
-#define _DEBUG_PIN1 11
-#define _DEBUG_PIN2 13
-CandleSoftwareSerial *CandleSoftwareSerial::active_object = 0;
-uint8_t CandleSoftwareSerial::_receive_buffer[_SS_MAX_RX_BUFF]; 
-volatile uint8_t CandleSoftwareSerial::_receive_buffer_tail = 0;
-volatile uint8_t CandleSoftwareSerial::_receive_buffer_head = 0;
-
-inline void DebugPulse(uint8_t, uint8_t) {}
-
-inline void CandleSoftwareSerial::tunedDelay(uint16_t delay) { 
-  _delay_loop_2(delay);
-}
-
-bool CandleSoftwareSerial::listen()
-{
-  if (!_rx_delay_stopbit)
-    return false;
-
-  if (active_object != this)
-  {
-    if (active_object)
-      active_object->stopListening();
-
-    _buffer_overflow = false;
-    _receive_buffer_head = _receive_buffer_tail = 0;
-    active_object = this;
-
-    setRxIntMsk(true);
-    return true;
-  }
-
-  return false;
-}
-
-bool CandleSoftwareSerial::stopListening()
-{
-  if (active_object == this)
-  {
-    setRxIntMsk(false);
-    active_object = NULL;
-    return true;
-  }
-  return false;
-}
-
-void CandleSoftwareSerial::recv()
-{
-
-#if GCC_VERSION < 40302
-// Work-around for avr-gcc 4.3.0 OSX version bug
-// Preserve the registers that the compiler misses
-// (courtesy of Arduino forum user *etracer*)
-  asm volatile(
-    "push r18 \n\t"
-    "push r19 \n\t"
-    "push r20 \n\t"
-    "push r21 \n\t"
-    "push r22 \n\t"
-    "push r23 \n\t"
-    "push r26 \n\t"
-    "push r27 \n\t"
-    ::);
-#endif  
-
-  uint8_t d = 0;
-
-  if (_inverse_logic ? rx_pin_read() : !rx_pin_read())
-  {
-    setRxIntMsk(false);
-    tunedDelay(_rx_delay_centering);
-    DebugPulse(_DEBUG_PIN2, 1);
-    for (uint8_t i=8; i > 0; --i)
-    {
-      tunedDelay(_rx_delay_intrabit);
-      d >>= 1;
-      DebugPulse(_DEBUG_PIN2, 1);
-      if (rx_pin_read())
-        d |= 0x80;
-    }
-
-    if (_inverse_logic)
-      d = ~d;
-
-    // if buffer full, set the overflow flag and return
-    uint8_t next = (_receive_buffer_tail + 1) % _SS_MAX_RX_BUFF;
-    if (next != _receive_buffer_head)
-    {
-      // save new data in buffer: tail points to where byte goes
-      _receive_buffer[_receive_buffer_tail] = d; // save new byte
-      _receive_buffer_tail = next;
-    } 
-    else 
-    {
-      DebugPulse(_DEBUG_PIN1, 1);
-      _buffer_overflow = true;
-    }
-
-    // skip the stop bit
-    tunedDelay(_rx_delay_stopbit);
-    DebugPulse(_DEBUG_PIN1, 1);
-    setRxIntMsk(true);
-
-  }
-
-#if GCC_VERSION < 40302
-// Work-around for avr-gcc 4.3.0 OSX version bug
-// Restore the registers that the compiler misses
-  asm volatile(
-    "pop r27 \n\t"
-    "pop r26 \n\t"
-    "pop r23 \n\t"
-    "pop r22 \n\t"
-    "pop r21 \n\t"
-    "pop r20 \n\t"
-    "pop r19 \n\t"
-    "pop r18 \n\t"
-    ::);
-#endif
-}
-
-uint8_t CandleSoftwareSerial::rx_pin_read()
-{
-  return *_receivePortRegister & _receiveBitMask;
-}
-
-inline void CandleSoftwareSerial::handle_interrupt()
-{
-  if (active_object)
-  {
-    active_object->recv();
-  }
-}
-
-#if defined(PCINT0_vect)
-ISR(PCINT0_vect)
-{
-  CandleSoftwareSerial::handle_interrupt();
-}
-#endif
-
-#if defined(PCINT1_vect)
-ISR(PCINT1_vect, ISR_ALIASOF(PCINT0_vect));
-#endif
-
-#if defined(PCINT2_vect)
-ISR(PCINT2_vect, ISR_ALIASOF(PCINT0_vect));
-#endif
-
-#if defined(PCINT3_vect)
-ISR(PCINT3_vect, ISR_ALIASOF(PCINT0_vect));
-#endif
-
-CandleSoftwareSerial::CandleSoftwareSerial(uint8_t receivePin, uint8_t transmitPin, bool inverse_logic) : 
-  _rx_delay_centering(0),
-  _rx_delay_intrabit(0),
-  _rx_delay_stopbit(0),
-  _tx_delay(0),
-  _buffer_overflow(false),
-  _inverse_logic(inverse_logic)
-{
-  setTX(transmitPin);
-  setRX(receivePin);
-}
-
-CandleSoftwareSerial::~CandleSoftwareSerial()
-{
-  end();
-}
-
-void CandleSoftwareSerial::setTX(uint8_t tx)
-{
-  digitalWrite(tx, _inverse_logic ? LOW : HIGH);
-  pinMode(tx, OUTPUT);
-  _transmitBitMask = digitalPinToBitMask(tx);
-  uint8_t port = digitalPinToPort(tx);
-  _transmitPortRegister = portOutputRegister(port);
-}
-
-void CandleSoftwareSerial::setRX(uint8_t rx)
-{
-  pinMode(rx, INPUT);
-  if (!_inverse_logic)
-    digitalWrite(rx, HIGH);  // pullup for normal logic!
-  _receivePin = rx;
-  _receiveBitMask = digitalPinToBitMask(rx);
-  uint8_t port = digitalPinToPort(rx);
-  _receivePortRegister = portInputRegister(port);
-}
-
-uint16_t CandleSoftwareSerial::subtract_cap(uint16_t num, uint16_t sub) {
-  if (num > sub)
-    return num - sub;
-  else
-    return 1;
-}
-
-void CandleSoftwareSerial::begin(long speed)
-{
-  _rx_delay_centering = _rx_delay_intrabit = _rx_delay_stopbit = _tx_delay = 0;
-  uint16_t bit_delay = (F_CPU / speed) / 4;
-  _tx_delay = subtract_cap(bit_delay, 15 / 4);
-
-  // Only setup rx when we have a valid PCINT for this pin
-  if(digitalPinToPCICR((int8_t)_receivePin)) {
-    #if GCC_VERSION > 40800
-    _rx_delay_centering = subtract_cap(bit_delay / 2, (4 + 4 + 75 + 17 - 23) / 4);
-    _rx_delay_intrabit = subtract_cap(bit_delay, 23 / 4);
-    _rx_delay_stopbit = subtract_cap(bit_delay * 3 / 4, (37 + 11) / 4);
-    #else // Timings counted from gcc 4.3.2 output
-    _rx_delay_centering = subtract_cap(bit_delay / 2, (4 + 4 + 97 + 29 - 11) / 4);
-    _rx_delay_intrabit = subtract_cap(bit_delay, 11 / 4);
-    _rx_delay_stopbit = subtract_cap(bit_delay * 3 / 4, (44 + 17) / 4);
-    #endif
-    *digitalPinToPCICR((int8_t)_receivePin) |= _BV(digitalPinToPCICRbit(_receivePin));
-    _pcint_maskreg = digitalPinToPCMSK(_receivePin);
-    _pcint_maskvalue = _BV(digitalPinToPCMSKbit(_receivePin));
-    tunedDelay(_tx_delay); // if we were low this establishes the end
-  }
-  listen();
-}
-
-void CandleSoftwareSerial::setRxIntMsk(bool enable)
-{
-    if (enable)
-      *_pcint_maskreg |= _pcint_maskvalue;
-    else
-      *_pcint_maskreg &= ~_pcint_maskvalue;
-}
-
-void CandleSoftwareSerial::end()
-{
-  stopListening();
-}
-
-
-// Read data from buffer
-int CandleSoftwareSerial::read()
-{
-  if (!isListening())
-    return -1;
-
-  // Empty buffer?
-  if (_receive_buffer_head == _receive_buffer_tail)
-    return -1;
-
-  // Read from "head"
-  uint8_t d = _receive_buffer[_receive_buffer_head]; // grab next byte
-  _receive_buffer_head = (_receive_buffer_head + 1) % _SS_MAX_RX_BUFF;
-  return d;
-}
-
-int CandleSoftwareSerial::available()
-{
-  if (!isListening())
-    return 0;
-
-  return (_receive_buffer_tail + _SS_MAX_RX_BUFF - _receive_buffer_head) % _SS_MAX_RX_BUFF;
-}
-
-size_t CandleSoftwareSerial::write(uint8_t b)
-{
-  if (_tx_delay == 0) {
-    setWriteError();
-    return 0;
-  }
-
-  volatile uint8_t *reg = _transmitPortRegister;
-  uint8_t reg_mask = _transmitBitMask;
-  uint8_t inv_mask = ~_transmitBitMask;
-  uint8_t oldSREG = SREG;
-  bool inv = _inverse_logic;
-  uint16_t delay = _tx_delay;
-
-  if (inv)
-    b = ~b;
-
-  cli();  // turn off interrupts for a clean txmit
-
-  // Write the start bit
-  if (inv)
-    *reg |= reg_mask;
-  else
-    *reg &= inv_mask;
-
-  tunedDelay(delay);
-
-  // Write each of the 8 bits
-  for (uint8_t i = 8; i > 0; --i)
-  {
-    if (b & 1) // choose bit
-      *reg |= reg_mask; // send 1
-    else
-      *reg &= inv_mask; // send 0
-
-    tunedDelay(delay);
-    b >>= 1;
-  }
-
-  // restore pin to natural state
-  if (inv)
-    *reg &= inv_mask;
-  else
-    *reg |= reg_mask;
-
-  SREG = oldSREG; // turn interrupts back on
-  tunedDelay(_tx_delay);
-  
-  return 1;
-}
-
-int CandleSoftwareSerial::peek()
-{
-  if (!isListening())
-    return -1;
-
-  // Empty buffer?
-  if (_receive_buffer_head == _receive_buffer_tail)
-    return -1;
-
-  // Read from "head"
-  return _receive_buffer[_receive_buffer_head];
-}
-
-
-
-
 /*
  * 
  * The MySensors Arduino library handles the wireless radio link and protocol
@@ -1884,39 +1449,3 @@ int CandleSoftwareSerial::peek()
  * version 2 as published by the Free Software Foundation.
  * 
  */
-
- 
-
-/*
- * To deal with a strange issue with the software serial buffer, 
- * currently the entire software serial code is inside this sketch.
- * 
-SoftwareSerial.h (formerly NewSoftSerial.h) - 
-Multi-instance software serial library for Arduino/Wiring
--- Interrupt-driven receive and other improvements by ladyada
-   (http://ladyada.net)
--- Tuning, circular buffer, derivation from class Print/Stream,
-   multi-instance support, porting to 8MHz processors,
-   various optimizations, PROGMEM delay tables, inverse logic and 
-   direct port writing by Mikal Hart (http://www.arduiniana.org)
--- Pin change interrupt macros by Paul Stoffregen (http://www.pjrc.com)
--- 20MHz processor support by Garrett Mace (http://www.macetech.com)
--- ATmega1280/2560 support by Brett Hagman (http://www.roguerobotics.com/)
-
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-The latest version of this library can always be found at
-http://arduiniana.org.
-*/
