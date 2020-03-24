@@ -103,7 +103,7 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 #define RELAY2_PIN 6                                // Relay 2 pin number (use this on a door that can be set to locked or unlocked mode, for example with a solenoid.).
 
 
-#ifdef JESSE    // For the Candle prototype by Jesse Howard
+#ifdef JESSE                                        // For the Candle prototype by Jesse Howard
 #define TOGGLE_FAKE_DATA_PIN A3
 #define TOP_MOTOR_SWITCH_PIN A1
 #define BOTTOM_MOTOR_SWITCH_PIN A2
@@ -327,8 +327,8 @@ void send_values()
   send(text_message.setSensor(ROTATING_PASSWORD1_ID).set( rotatingPassword1 )); wait(RADIO_DELAY);
   send(text_message.setSensor(ROTATING_PASSWORD2_ID).set( rotatingPassword2 )); wait(RADIO_DELAY);
 
-  send(relay_message.setSensor(TRANSMISSION_STATE_CHILD_ID).set(transmission_state),1);
-  send(relay_message.setSensor(SMS_CONTROL_ID).set(sms_control_state),1);
+  send(relay_message.setSensor(TRANSMISSION_STATE_CHILD_ID).set(transmission_state),1); wait(RADIO_DELAY);
+  send(relay_message.setSensor(SMS_CONTROL_ID).set(sms_control_state),1); wait(RADIO_DELAY);
 
   if( transmission_state ){                           // Send the state of the locks (if data transmission is allowed)
     for( byte i = 0; i < DOOR_COUNT; i++ ){
@@ -450,7 +450,7 @@ void loop()
     
     Serial.print(F("Sending new sms control state: ")); Serial.println(sms_control_state);
     //controller_got_transmission_state = false;
-    send(relay_message.setSensor(SMS_CONTROL_ID).set(sms_control_state),1); // We acknowledge to the controller that we are now in the new state.
+    send(relay_message.setSensor(SMS_CONTROL_ID).set(sms_control_state),1);  wait(RADIO_DELAY);// We acknowledge to the controller that we are now in the new state.
     wait(RADIO_DELAY);
   }
 
@@ -506,7 +506,7 @@ void loop()
     Serial.println();
     Serial.print(F("__GSM boot step ")); Serial.println(modem_counter);
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-    send(text_message.setSensor(DEVICE_STATUS_ID).set( (char) modem_counter ));
+    send(text_message.setSensor(DEVICE_STATUS_ID).set( (char) modem_counter )); wait(RADIO_DELAY);
 #endif
     
     switch( modem_counter ){
@@ -705,7 +705,7 @@ void loop()
       desired_door_states[0] = !desired_door_states[0]; // On press of the button, toggle the door 1 desired status. e.g. locked -> unlocked.
 #ifdef ALLOW_CONNECTING_TO_NETWORK
       if( transmission_state ){
-        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 1 pressed") ));
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 1 pressed") )); wait(RADIO_DELAY);
       }
 #endif
       Serial.print(F("Button1->")); Serial.println(desired_door_states[0]);
@@ -719,7 +719,7 @@ void loop()
       desired_door_states[1] = !desired_door_states[1]; // On press of the button, toggle the door 2 desired status. e.g. locked -> unlocked.
 #ifdef ALLOW_CONNECTING_TO_NETWORK
       if( transmission_state ){
-        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 2 pressed") ));
+        send(text_message.setSensor(DEVICE_STATUS_ID).set( F("Button 2 pressed") )); wait(RADIO_DELAY);
       }
 #endif
       Serial.print(F("Button2->")); Serial.println(desired_door_states[1]);
@@ -806,7 +806,7 @@ void processLine()
 {
 #ifdef DEBUG
   Serial.print(F("processing: ")); Serial.println(serial_line);
-  //send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+  //send(text_message.setSensor(SMS_CHILD_ID).set(serial_line)); wait(RADIO_DELAY);
 #endif
 
   // If the incomingSMS has been set, that means we already found the phonenumber part of the sms, and are now at the actual sms content part.
@@ -879,7 +879,7 @@ void processLine()
 #ifdef ALLOW_CONNECTING_TO_NETWORK
       if( transmission_state ){
         serial_line[24] = '\0';
-        send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+        send(text_message.setSensor(SMS_CHILD_ID).set(serial_line)); wait(RADIO_DELAY);
       }
 #endif
     }
@@ -903,7 +903,7 @@ void processLine()
         if( transmission_state ){
         serial_line[24] = '\0';
         Serial.println(serial_line);
-        send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+        send(text_message.setSensor(SMS_CHILD_ID).set(serial_line)); wait(RADIO_DELAY);
         wait(1000);
         send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM network error (CMS)") )); wait(RADIO_DELAY);
         wait(2000);
@@ -917,7 +917,7 @@ void processLine()
 #ifdef ALLOW_CONNECTING_TO_NETWORK
       if( transmission_state ){
         serial_line[24] = '\0';
-        send(text_message.setSensor(SMS_CHILD_ID).set(serial_line));
+        send(text_message.setSensor(SMS_CHILD_ID).set(serial_line)); wait(RADIO_DELAY);
         //send(text_message.setSensor(DEVICE_STATUS_ID).set( F("GSM error (CME)") )); wait(RADIO_DELAY);
         //wait(1000);
       }
@@ -1040,7 +1040,7 @@ void processLine()
         Serial.println();
         // Send the unexpected phone number:
 #ifdef ALLOW_CONNECTING_TO_NETWORK
-        send(text_message.setSensor(DEVICE_STATUS_ID).set(F("Unknown phone number!")));
+        send(text_message.setSensor(DEVICE_STATUS_ID).set(F("Unknown phone number!"))); wait(RADIO_DELAY);
         send(text_message.setSensor(SMS_CHILD_ID).set( foundNumber )); wait(RADIO_DELAY); // Tell the controller which phone number just sent us an SMS.
 #endif
       }
