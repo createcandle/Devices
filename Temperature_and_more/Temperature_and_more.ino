@@ -23,9 +23,9 @@
 
 // You can enable and disable the settings below by adding or removing double slashes ( // ) in front of a line.
 
-#define SECONDS_BETWEEN_SENDING 60                  // Sleep time between reads for the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute. MAximum is 255 (because the value is stored as a byte, instead of the bigger 'int')
+#define SECONDS_BETWEEN_SENDING 60                  // Interval. Sleep time between taking and transmitting readings from the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute.
 
-#define HAS_TOUCH_SCREEN                            // Did you connect a touch screen?
+//#define HAS_TOUCH_SCREEN                            // Did you connect a touch screen?
 
 #define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the local Candle network? For privacy or security reasons you may prefer a stand-alone device.
 
@@ -270,7 +270,7 @@ int freeRam () {
 #ifdef ALLOW_CONNECTING_TO_NETWORK
 void presentation()  {
   // Send the sketch version information to the gateway and Controller
-  sendSketchInfo(F("Weather station"), F("1.0")); wait(RADIO_DELAY);
+  sendSketchInfo(F("Temperature and more"), F("1.0")); wait(RADIO_DELAY);
 
   // Tell the MySensors gateway what kind of sensors this node has, and what their ID's on the node are, as defined in the code above.
   present(DATA_TRANSMISSION_CHILD_ID, S_BINARY, F("Data transmission")); wait(RADIO_DELAY);  
@@ -298,7 +298,7 @@ void send_values(){
 
 void setup() {
   Serial.begin(115200); // for serial debugging over USB.
-  Serial.println(F("Hello, I am a climate sensor"));
+  Serial.println(F("Hello, I am a temperature and more sensor"));
 
   transmission_state = loadState(DATA_TRANSMISSION_CHILD_ID);
   previous_transmission_state = !transmission_state;
@@ -386,7 +386,7 @@ void loop()
 #endif
 
   static unsigned long previousMillis = 0;          // Used to keep track of time.
-  static byte intervalCounter = 255;                // How may intervals have passed.
+  static int intervalCounter = SECONDS_BETWEEN_SENDING;                // How may intervals have passed.
   
 #ifdef HAS_TOUCH_SCREEN    
   // Check if the screen is being touched.
@@ -591,7 +591,7 @@ void loop()
         
         // UNKNOWN
         if(forecast == 5){
-          Serial.println(F("UNKNOWN"));
+          Serial.println(F("Forecast: UNKNOWN"));
 #ifdef ALLOW_CONNECTING_TO_NETWORK
           if(transmission_state){
             send(string_message.set(F("Unknown")));       // Sending the latest forecast to the controller.
@@ -611,8 +611,9 @@ void loop()
             send(string_message.set(F("Stable")));       // Sending the latest forecast to the controller.
           }
 #endif
-          cloud_color = WHITE;
+          
 #ifdef HAS_TOUCH_SCREEN
+          cloud_color = WHITE;
           fontSize(4);
           writeText(SCREEN_STABLE);
 #endif
@@ -651,9 +652,10 @@ void loop()
 
         // CLOUDY WEATHER OR THUNDERSTORM
         else if(forecast == CLOUDY || forecast == THUNDERSTORM){
-          if(forecast == THUNDERSTORM){ cloud_color = RED; }
+          
 
 #ifdef HAS_TOUCH_SCREEN
+          if(forecast == THUNDERSTORM){ cloud_color = RED; }
           circle(TOUCHSCREEN_WIDTH / 2, ITEM_HEIGHT * 3, circle_size, cloud_color); // x, y, radius, color
           circle((TOUCHSCREEN_WIDTH / 2) - circle_size, ITEM_HEIGHT * 3 + 10, circle_size - 10, cloud_color);
           circle(int((TOUCHSCREEN_WIDTH / 2) + circle_size), ITEM_HEIGHT * 3 + 20, circle_size - 20, cloud_color);
