@@ -1,7 +1,7 @@
 /* 
  * Temperature and more sensor
  * 
- * This device can measure:
+ * This device is basically a weather station. It can measure:
  * - Temperature
  * - Humidity 
  * - Air pressure (barometer). 
@@ -25,7 +25,7 @@
 
 #define SECONDS_BETWEEN_SENDING 60                  // Interval. Sleep time between taking and transmitting readings from the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute.
 
-//#define HAS_TOUCH_SCREEN                            // Did you connect a touch screen?
+#define HAS_TOUCH_SCREEN                            // Did you connect a touch screen?
 
 #define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the local Candle network? For privacy or security reasons you may prefer a stand-alone device.
 
@@ -178,8 +178,8 @@ const MessageDef MessageTable[] PROGMEM = {
   {SCREEN_TEMPERATURE,"Temperature"},
   {SCREEN_HUMIDITY,"Humidity"},
   {SCREEN_FORECAST,"Barometer"},
-  {SCREEN_STABLE,"STABLE"},
-  {SCREEN_SUNNY,"SUNNY"},
+  {SCREEN_STABLE,"Stable"},
+  {SCREEN_SUNNY,"Sunny"},
   {SCREEN_CLOUDY,"Cloudy"},
   {SCREEN_UNSTABLE,"Unstable"},
   {SCREEN_THUNDERSTORM,"Thunderstorm"},
@@ -301,7 +301,7 @@ void setup() {
   Serial.println(F("Hello, I am a temperature and more sensor"));
 
   transmission_state = loadState(DATA_TRANSMISSION_CHILD_ID);
-  previous_transmission_state = !transmission_state;
+  previous_transmission_state = !transmission_state; // This was the change process will be triggered on the first loop
 #ifdef DEBUG
   Serial.print(F("Loaded transmission_state: ")); Serial.println(transmission_state);
 #endif
@@ -398,23 +398,21 @@ void loop()
     previous_transmission_state = transmission_state;
     saveState(DATA_TRANSMISSION_CHILD_ID, transmission_state);
     Serial.print(F("Sending new data transmission state: ")); Serial.println(transmission_state);
-    send(relay_message.setSensor(DATA_TRANSMISSION_CHILD_ID).set(transmission_state));
+    wait(RADIO_DELAY);
+    send(relay_message.setSensor(DATA_TRANSMISSION_CHILD_ID).set(transmission_state)); wait(RADIO_DELAY);
 
-    if( transmission_state ){
 #ifdef HAS_TOUCH_SCREEN
+    if( transmission_state ){
       Serial.println(F("BC: show T icon"));
       setCur(TOUCHSCREEN_WIDTH - T_POSITION, SCREEN_PADDING );
       fontSize(1);
       writeString("T",1);
-#endif
     }
     else {
-#ifdef HAS_TOUCH_SCREEN
       Serial.println(F("BC: hide T icon"));
       roundedRectangle(TOUCHSCREEN_WIDTH - T_POSITION,0, 8, LABEL_HEIGHT, 0, BLACK);  
-#endif 
     }
-    
+#endif 
   }
 
 
@@ -427,12 +425,13 @@ void loop()
   //
 
 
-  if(millis() - previousMillis >= INTERVAL){        // Main loop, runs every second.
+  if( millis() - previousMillis >= INTERVAL ){        // Main loop, runs every second.
     previousMillis = millis();                      // Store the current time as the previous measurement start time.
     
-    if(intervalCounter >= SECONDS_BETWEEN_SENDING){
+    if( intervalCounter >= SECONDS_BETWEEN_SENDING ){
       intervalCounter = 0;
-    }else{
+    }
+    else{
       intervalCounter++;
     }
     //Serial.println(intervalCounter);
@@ -1252,6 +1251,7 @@ void receive(const MyMessage &message)
   else if (message.type == V_STATUS && message.sensor == DATA_TRANSMISSION_CHILD_ID ){
     transmission_state = message.getBool(); //?RELAY_ON:RELAY_OFF;
     Serial.print(F("-New desired transmission state: ")); Serial.println(transmission_state);
+    send(relay_message.setSensor(DATA_TRANSMISSION_CHILD_ID).set(transmission_state));
   }  
 #ifdef HAS_TOUCH_SCREEN
   else if( message.type==V_STATUS && message.sensor == SCREEN_BUTTON_CHILD_ID ){
