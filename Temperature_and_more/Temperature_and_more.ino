@@ -25,7 +25,7 @@
 
 #define SECONDS_BETWEEN_SENDING 60                  // Interval. Sleep time between taking and transmitting readings from the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute.
 
-#define HAS_TOUCH_SCREEN                            // Did you connect a touch screen?
+//#define HAS_TOUCH_SCREEN                            // Did you connect a touch screen?
 
 #define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the local Candle network? For privacy or security reasons you may prefer a stand-alone device.
 
@@ -40,6 +40,13 @@
  *
  */
 
+//#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
+//#define DEBUG_SCREEN                              // Do you want to see extra debugging information about the touch screen in the serial output?
+//#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
+
+
+
+
 // PINS
 #define TOUCH_SCREEN_RX_PIN 5                       // The receive (RX) pin for the touchscreen. This connects to the transmit (TX) pin of the touchscreen.
 #define TOUCH_SCREEN_TX_PIN 6                       // The receive (TX) pin for the touchscreen. This connects to the transmit (RX) pin of the touchscreen.
@@ -52,9 +59,6 @@
 #define MY_RF24_CE_PIN 10                           // Used by the MySensors library.
 #endif
 
-//#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
-//#define DEBUG_SCREEN                              // Do you want to see extra debugging information about the touch screen in the serial output?
-//#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 
 // Enable and select the attached radio type
@@ -280,13 +284,13 @@ void presentation()  {
   present(FORECAST_CHILD_ID, S_INFO, F("Forecast")); wait(RADIO_DELAY);
 #ifdef HAS_TOUCH_SCREEN
   present(SCREEN_BUTTON_CHILD_ID, S_BINARY, F("Screen")); wait(RADIO_DELAY);
-  send_all_values = 1;
 #endif
+  send_all_values = 1;
 }
 
 void send_values(){
 #ifdef DEBUG
-  Serial.println(F("Sending button states"));
+  Serial.println(F("Sending values"));
 #endif
   send(relay_message.setSensor(DATA_TRANSMISSION_CHILD_ID).set(transmission_state)); wait(RADIO_DELAY);
   send(relay_message.setSensor(SCREEN_BUTTON_CHILD_ID).set(1)); wait(RADIO_DELAY);
