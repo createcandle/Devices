@@ -13,7 +13,10 @@
 
 // You can enable and disable the settings below by adding or removing double slashes ( // ) in front of a line.
 
+//#define SHOW_TRANSMISSION_DETAILS                 // Show transmission details. If you enable this, the receiver will shown as a separate device. It will have details about how many auccesful and how many failed transmission are made. These values are updated every 5 minutes.
+
 #define RF_NANO                                     // RF-Nano. Enable this if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+
 
 /* END OF SETTINGS
 *
@@ -32,7 +35,7 @@
 #endif
 
 // Enable and select radio type attached
-#define MY_RADIO_RF24
+#define MY_RADIO_RF24                               // MySensors supports multiple radio modules. Candle uses NRF24.
 //#define MY_RADIO_NRF5_ESB
 //#define MY_RADIO_RFM69
 //#define MY_RADIO_RFM95
@@ -42,7 +45,7 @@
 //#define MY_RF24_PA_LEVEL RF24_PA_MIN
 //#define MY_RF24_PA_LEVEL RF24_PA_LOW
 //#define MY_RF24_PA_LEVEL RF24_PA_HIGH
-#define MY_RF24_PA_LEVEL RF24_PA_MAX
+#define MY_RF24_PA_LEVEL RF24_PA_MAX                // Sets the radio to transmit at maximum power, for optimum range.
 
 // Mysensors advanced security
 #define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // The Candle Manager add-on will change this into the actual password your network uses.
@@ -56,34 +59,101 @@
 #define MY_SPLASH_SCREEN_DISABLED                   // Saves a little memory.
 
 // Enable serial gateway
-#define MY_GATEWAY_SERIAL                           // This is the main function of this code. It tells the MySensors library to turn this device into a gateway for MySensors network.
+#define MY_GATEWAY_SERIAL                           // This is the main function of this code. It tells the MySensors library to turn this device into a gateway/receiver for MySensors network.
+
+
+#ifdef SHOW_TRANSMISSION_DETAILS
+// Report how often there are wireless communication issues
+#define MY_INDICATION_HANDLER
+unsigned int txOK = 0;                              // Good transmissions counter
+unsigned int txERR = 0;                             // Failed transmissions counter
+#define REPORT_INTERVAL 300000                      // Report every 5 minutes
+#define CHILD_ID_TX_OK 1                            // Child id for the counter of OK transmissions
+#define CHILD_ID_TX_ERR 2                           // Child id for the counter of failed transmissions
+#endif
+
 
 #include <MySensors.h>                              // The MySensors library, which takes care of creating the wireless network.
 #include <avr/wdt.h>                                // The watchdog timer - if the device becomes unresponsive and doesn't periodically reset the timer, then it will automatically reset once the timer reaches 0.
 
 // Clock for the watchdog
-#define INTERVAL 1000                               // Every second we reset the watchdog timer. If the device freezes, the watchdog will not re reset, and the device will reboot.
-unsigned long previousMillis = 0;                   // Used to run the internal clock
+#define INTERVAL 500                                // Every second we reset the watchdog timer. If the device freezes, the watchdog will not be reset, and the device will reboot.
+#define RADIO_DELAY 100                             // Milliseconds of delay between sending transmissions, this keeps the radio module happy.
 
 
-void setup()
+unsigned long current_time = 0;
+byte loops_passed = 0;            // Used to schedule things on a timeline.
+
+
+#ifdef SHOW_TRANSMISSION_DETAILS
+MyMessage transmission_quality_message(CHILD_ID_TX_OK, V_CUSTOM);
+
+void indication(indication_t ind)
 {
-  wdt_enable(WDTO_2S);                              // Starts the watchdog timer. If it is not reset at least once every 2 seconds, then the entire device will automatically restart.                                 
+  switch (ind)
+  {
+    case INDICATION_TX:
+      txOK++;
+      break;
+    case INDICATION_ERR_TX:
+      txERR++;
+      break;
+  }
 }
+#endif
+
 
 
 void presentation()
 {
-	// The receiver does not have any extra children.
+#ifdef SHOW_TRANSMISSION_DETAILS
+  sendSketchInfo(F("Candle receiver"), F("1.0"));
+  present(CHILD_ID_TX_OK, S_CUSTOM, F("Good transmissions")); // Tell the controller about this property
+  present(CHILD_ID_TX_ERR, S_CUSTOM,F("Bad transmissions")); // Tell the controller about this property
+#endif
 }
+
+
+
+void setup()
+{
+  //Serial.println(F("Hello, I am a Candle receiver"));
+
+  send(transmission_quality_message.setSensor(CHILD_ID_TX_OK).set(txOK)); // Send the good transmissions value
+  send(transmission_quality_message.setSensor(CHILD_ID_TX_ERR).set(txERR)); // Send the failed transmissions value
+
+  wdt_enable(WDTO_2S);                              // Starts the watchdog timer. If it is not reset at least once every 2 seconds, then the entire device will automatically restart.                                 
+}
+
 
 
 void loop()
 {
-  if(millis() - previousMillis >= INTERVAL){        // Main loop, runs every second.
-    previousMillis = millis();                      // Store the current time as the previous measurement start time.
+  static unsigned long previous_millis = 0;         // Used to run the internal clock
+  current_time = millis();
+  
+  if( current_time - previous_millis >= INTERVAL ){ // Main loop, runs every second.
+    previous_millis = current_time;                 // Store the current time as the previous measurement start time.
     wdt_reset();                                    // Reset the watchdog timer
+
+    loops_passed++;
+    if( loops_passed > 120 ){                       // If a minute has passed, send a heartbeat.
+      sendHeartbeat();                              // Tells the controller we're still connected.
+      loops_passed = 0;
+    }                     
   }
+
+#ifdef SHOW_TRANSMISSION_DETAILS
+  static unsigned long last_send = 0;
+  if( current_time - last_send >= REPORT_INTERVAL ){
+    send(transmission_quality_message.setSensor(CHILD_ID_TX_OK).set(txOK)); // Send the good transmissions value
+    send(transmission_quality_message.setSensor(CHILD_ID_TX_ERR).set(txERR)); // Send the failed transmissions value
+    txOK = 0;                                       // Reset the good transmissions counter back to 0
+    txERR = 0;                                      // Reset the error transmissions counter back to 0
+    last_send = current_time;                       // Remember the time when the transmissions was done.
+  }
+#endif
+
 }
 
 
