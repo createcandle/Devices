@@ -446,7 +446,7 @@ void loop()
     wdt_reset();                                    // Reset the watchdog timer
 
 #ifdef ALLOW_CONNECTING_TO_NETWORK                  // About once a minute, let the controller know this device is connected, even if no sensor data is being sent.
-    if( intervalCounter % 59 == 0 ){
+    if( intervalCounter % 60 == 0 ){
       Serial.println(F("Sending heartbeat"));
       sendHeartbeat();
     }
