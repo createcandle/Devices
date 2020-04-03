@@ -25,14 +25,13 @@
 
 #define SECONDS_BETWEEN_SENDING 60                  // Interval. Sleep time between taking and transmitting readings from the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute.
 
-#define HAS_TOUCH_SCREEN                          // Did you connect a touch screen? Touching it will turn the screen itself on and off.
+#define HAS_TOUCH_SCREEN                            // Did you connect a touch screen? Touching it will turn the screen itself on and off.
 
 #define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the local Candle network? For privacy or security reasons you may prefer a stand-alone device.
 
 //#define MY_REPEATER_FEATURE                       // Act as a repeater? The devices can pass along messages to each other to increase the range of your network.
 
 #define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
-
 
  /* END OF SETTINGS
  *
@@ -244,7 +243,7 @@ MyMessage temperature_message(TEMP_CHILD_ID, V_TEMP);
 MyMessage humidity_message(HUM_CHILD_ID, V_HUM);
 MyMessage pressure_message(BARO_CHILD_ID, V_PRESSURE);
 MyMessage string_message(FORECAST_CHILD_ID, V_TEXT);
-MyMessage relay_message(SCREEN_BUTTON_CHILD_ID, V_STATUS); // Allows the controller to turn the screen on and off.
+MyMessage relay_message(SCREEN_BUTTON_CHILD_ID, V_STATUS); // Allows the controller to turn data transmission as well as the screen on and off.
 
 
 // Connection toggle feature
@@ -256,7 +255,7 @@ boolean connected_to_network = false;               // Are we connected to the l
 boolean send_all_values = true;                     // Sends the state of the toggle to the controller on startup or when requested by the controller.
 #endif
 
-boolean metric = true;                              // Should the device show metric or Fahrenheit?
+boolean metric = true;                              // Should the device show metric or Fahrenheit? By default it will show metric.
 
 
 
@@ -439,16 +438,19 @@ void loop()
     
     if( intervalCounter >= SECONDS_BETWEEN_SENDING ){
       intervalCounter = 0;
-#ifdef ALLOW_CONNECTING_TO_NETWORK                  // Let the controller know this device is connected, even if no sensor data is being sent.
-      sendHeartbeat();
-#endif
     }
     else{
       intervalCounter++;
     }
-    //Serial.println(intervalCounter);
     
     wdt_reset();                                    // Reset the watchdog timer
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK                  // About once a minute, let the controller know this device is connected, even if no sensor data is being sent.
+    if( intervalCounter % 59 == 0 ){
+      Serial.println(F("Sending heartbeat"));
+      sendHeartbeat();
+    }
+#endif
 
 
     // Clock schedule
