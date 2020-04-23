@@ -13,7 +13,7 @@
 
 // You can enable and disable the settings below by adding or removing double slashes ( // ) in front of a line.
 
-//#define SHOW_TRANSMISSION_DETAILS                 // Show transmission details. If you enable this, the receiver will shown as a separate device. It will have details about how many auccesful and how many failed transmission are made. These values are updated every 5 minutes.
+#define SHOW_TRANSMISSION_DETAILS                 // Show transmission details. If you enable this, the receiver will shown as a separate device. It will have details about how many succesful and how many failed transmission are made. These values are updated every 5 minutes.
 
 #define RF_NANO                                     // RF-Nano. Enable this if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
@@ -118,10 +118,10 @@ void presentation()
 void setup()
 {
   //Serial.println(F("Hello, I am a Candle receiver"));
-
+#ifdef SHOW_TRANSMISSION_DETAILS
   send(transmission_quality_message.setSensor(CHILD_ID_TX_OK).set(txOK)); // Send the good transmissions value
   send(transmission_quality_message.setSensor(CHILD_ID_TX_ERR).set(txERR)); // Send the failed transmissions value
-
+#endif
   wdt_enable(WDTO_2S);                              // Starts the watchdog timer. If it is not reset at least once every 2 seconds, then the entire device will automatically restart.                                 
 }
 
