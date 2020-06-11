@@ -71,7 +71,7 @@ byte motionThreshold = 8;                   // How many seconds of movement per 
 
 
 // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
-#define MY_DEBUG 
+//#define MY_DEBUG 
 //#define MY_DEBUG_VERBOSE_SIGNING
 
 
