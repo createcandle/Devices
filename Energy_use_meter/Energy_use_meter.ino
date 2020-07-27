@@ -1,6 +1,7 @@
 /*
+ * Energy use sensor
  * 
- * This devices counts LED blinks from your power company's measument device. This allows it to calculate how many watts your home is currently using. By measuring this over time, it becomes possible to keep track of how many kwh your home is using.
+ * Your home probably has a central electricity meter. On it, you may find a blinking LED. How frequently it blinks indicates how much power you are using. If you use more, it will blink faster. By measuring how often it blinks, this device can calculate how much electricity your home is currently using (in Watt). It also calculates how many electricity (in KiloWattHour) your home is consuming over time. It will give you live values, as well as the averages of the past hour and past day. If you disable live data transmission, it will only transmit these hourly and daily averages. You can always still see the live values on the display. 
  * 
  * 
  *
@@ -8,11 +9,11 @@
 
 //#define HAS_DISPLAY                               // Did you connect an OLED display on pins A4 (SDA) and A5 (SCK)?
 
-#define PULSE_FACTOR 1000                           // Blinks per kilowatt. Set the number of blinks per kilowatt of the electricity meter in your home. In most cases this is 1000.
+#define PULSE_FACTOR 1000                           // LED flashes per Kwh. Set the number of LED flashes that corresponds to the consumption of one Khw. In most cases this is 1000.
 
-#define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the network? For privacy or security reasons you may prefer a stand-alone device. If you do allow the device to connect, you can connect a toggle switch to pin 8 to switch the transmission of data or off.
+#define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the network? For privacy or security reasons you may prefer a stand-alone device.
 
-#define MY_REPEATER_FEATURE                         // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help the signal spread further.
+//#define MY_REPEATER_FEATURE                       // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help your network reach further.
 
 #define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
@@ -23,8 +24,8 @@
  */
 
 
-//#define DEBUG                                     // General debug option, give extra information via the serial output when enabled.
-//#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
+//#define DEBUG                                       // General debug option, give extra information via the serial output when enabled.
+//#define MY_DEBUG                                    // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 
 // Enable and select the attached radio type
@@ -54,12 +55,12 @@
 #define MY_SPLASH_SCREEN_DISABLED                   // Saves a little memory.
 //#define MY_DISABLE_RAM_ROUTING_TABLE_FEATURE      // Saves a little memory.
 
-#define RADIO_DELAY 100                              // Gives the radio some space to catch a breath
+#define RADIO_DELAY 100                             // Gives the radio some space to catch breath
 
 
 // PINS
 #define LIGHT_PULSE_SENSOR_PIN 2                    // The digital input you attached your light sensor.  (Only 2 and 3 generate interrupt)
-#define NETWORK_TOGGLE_PIN 8                        // The digital input you attached your light sensor.  (Only 2 and 3 generate interrupt)
+//#define TRANSMISSION_TOGGLE_PIN 8                   // A psychical switch to disable data transmission. This feature is currently disabled. In future, a small push button might be used to toggle data transmission state instead.
 
 
 #ifdef RF_NANO
@@ -83,22 +84,23 @@
 uint32_t SEND_FREQUENCY = 10000;                    // Minimum time between send (in milliseconds). We don't want to spam the gateway.
 float ppwh = ((float)PULSE_FACTOR)/1000;            // Pulses per watt hour
 boolean pulse_count_received = false;
-boolean connected = false;                          // Whether the device has actually been able to succesfully connect to the network.
-volatile uint32_t pulse_count = 0;
+boolean transmission_state = true;
+boolean previous_transmission_state = true;
+volatile boolean connected_to_network = false;      // Whether the device has actually been able to succesfully connect to the network.
+volatile boolean waiting_for_first_pulse = true;
+volatile uint32_t pulse_count = 0;                  // uint32_t = unsigned long
 volatile uint32_t last_blink = 0;
 volatile uint32_t watt = 0;
-uint32_t old_pulse_count = 0;
+uint32_t previous_pulse_count = 0;
 uint32_t old_watt = 0;
-float kwh = 0;
-float old_kwh = 0;
-float previous_kwh_hour_total = 0;                  // Stores what the KWH value was up to when the previous hour was complete. It's used to calculate how much was used in the current hour.
-float kwh_hour_total = 0;                           // How much electricity was used in the last hour.
-float kwh_day_total = 0;
-//uint32_t last_send;
+float kwh = 0;                                      // the total kwh so far during this day
+float kwh_hour = 0;                                 // The total kwh so far during this hour
+float previous_kwh_hour_total = 0;                  // Stores what the KWH value was up to when the previous hour ended. It's used to calculate how much was used in the current hour.
+float kwh_hour_total = 0;                           // How much electricity was used in the previous hour.
 
-unsigned long seconds_left_in_the_day = 1;          // When this counts down to 60, it will automatically trigger a re-request of the current time from the controller.
+
+unsigned long seconds_left_in_the_day = 86400;      // When this counts down to 60, it will automatically trigger a re-request of the current time from the controller.
 int seconds_left_in_the_hour = 1;
-//unsigned long last_epoch_time = 0;                // Holds the universal epoch time, which is requested from the gateway once in a while. 
 unsigned long epoch_time = 0;                       // Holds the universal epoch time, which is requested from the gateway once in a while. 
 
 unsigned long lastLoopTime = 0;                     // Holds the last time the main loop ran.
@@ -108,7 +110,9 @@ unsigned long lastLoopTime = 0;                     // Holds the last time the m
 #define millis_period = 3600000;                    // By default, the Kwh measurement works per day.
 
 // REQUIRED LIBRARIES
+#ifdef ALLOW_CONNECTING_TO_NETWORK
 #include <MySensors.h>                              // The MySensors library. Hurray!
+#endif
 #include <avr/wdt.h>                                // The watch dog timer resets the device if it becomes unresponsive.
 
 #ifdef HAS_DISPLAY
@@ -119,37 +123,48 @@ unsigned long lastLoopTime = 0;                     // Holds the last time the m
 #include <SSD1306AsciiAvrI2c.h>                     // "SSD1306Ascii"
 SSD1306AsciiAvrI2c oled;                            // Creating the display object
 byte screen_vertical_position = 3;                  // Used to always show both output at the top of the screen.
-#endif
+//#define F_POSITION 66                             // Horizontal position of the "F" icon, indicating it is allowed to generate fake data.
+#define T_POSITION 72                               // Horizontal position of the "T" icon, indicating it is allowed to transmit data.
+#define W_POSITION 80                               // Horizontal position of the "W" icon, indicating a wireless connection.
+#endif // End of has display
+
+
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK
 
 // MySensors
 #define WATT_CHILD_ID 1                             // The current wattage being used.
 #define KWH_PER_DAY_CHILD_ID 2                      // Every hour we update how much total electricity is being used as the day progresses.
 #define KWH_PER_HOUR_CHILD_ID 3                     // Every hour we update how much electricity was used in the past hour.
+#define DATA_TRANSMISSION_CHILD_ID 4                // The child ID of the data transmission switch.
+#define KWH_PER_DAY_TOTAL_CHILD_ID 5                // Every hour we update how much total electricity is being used as the day progresses.
+#define KWH_PER_HOUR_TOTAL_CHILD_ID 6               // Every hour we update how much electricity was used in the past hour.
 
+MyMessage relay_message(DATA_TRANSMISSION_CHILD_ID, V_STATUS); // A generic boolean state message.
 MyMessage watt_message(WATT_CHILD_ID,V_WATT);
 MyMessage kwh_message(KWH_PER_HOUR_CHILD_ID,V_KWH);
-//MyMessage pulse_count_message(WATT_PULSES_CHILD_ID,V_VAR1);
+//MyMessage pulse_count_message(WATT_PULSES_CHILD_ID,V_VAR1); // This is currently not used, but in future could be used to ask the controller to remember the total amount of pulses to far. This value could then be requested back whenever this device reboots.
 
 
 // Other
 boolean send_all_values = true;                     // When this is true, all current values will be (re)-sent to the controller.
-boolean connecting_to_network = false;
-boolean old_connecting_to_network = false;
 
 void presentation()
 {
-#ifdef ALLOW_CONNECTING_TO_NETWORK
   // Send the sketch version information to the gateway and Controller
-  sendSketchInfo("Energy meter", "1.0");
+  sendSketchInfo(F("Energy meter"), F("1.0")); wait(RADIO_DELAY);
 
-  // Register this device as power sensor
-  present(WATT_CHILD_ID, S_POWER,F("Watt"));
-  present(KWH_PER_DAY_CHILD_ID, S_POWER,F("Daily use"));
-  present(KWH_PER_HOUR_CHILD_ID, S_POWER,F("Hourly use"));
+  // Register this device with the controller
+  present(WATT_CHILD_ID, S_POWER,F("Wattage")); wait(RADIO_DELAY);
+  present(KWH_PER_DAY_CHILD_ID, S_POWER,F("Daily use")); wait(RADIO_DELAY);
+  present(KWH_PER_DAY_TOTAL_CHILD_ID, S_POWER,F("Yesterday total")); wait(RADIO_DELAY);
+  present(KWH_PER_HOUR_CHILD_ID, S_POWER,F("Hourly use")); wait(RADIO_DELAY);
+  present(KWH_PER_HOUR_TOTAL_CHILD_ID, S_POWER,F("Last hourly total")); wait(RADIO_DELAY);
+  present(DATA_TRANSMISSION_CHILD_ID, S_BINARY, F("Data transmission")); wait(RADIO_DELAY);
 
   send_all_values = true;
-#endif
 }
+#endif // End of allow connecting to network
 
 
 void setup()
@@ -157,23 +172,33 @@ void setup()
   Serial.begin(115200);
   Serial.println(F("Hello, I am an energy use meter"));
 
-#ifdef ALLOW_CONNECTING_TO_NETWORK
-  connecting_to_network = !digitalRead(NETWORK_TOGGLE_PIN);
-
-  if(isTransportReady()){
-    Serial.println(F("Connected to gateway"));
-  }else{
-    Serial.println(F("! NOT CONNECTED TO GATEWAY"));  
-  }
-#endif
-    
 
   // Use the internal pullup to be able to hook up this sketch directly to an energy meter with S0 output
   // If no pullup is used, the reported usage will be too high because of the floating pin
   pinMode(LIGHT_PULSE_SENSOR_PIN, INPUT_PULLUP);
-  pinMode(NETWORK_TOGGLE_PIN, INPUT_PULLUP);
+  //pinMode(TRANSMISSION_TOGGLE_PIN, INPUT_PULLUP);
 
-  attachInterrupt(digitalPinToInterrupt(LIGHT_PULSE_SENSOR_PIN), onPulse, RISING);
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+  transmission_state = loadState(DATA_TRANSMISSION_CHILD_ID);
+
+#ifdef DEBUG
+  Serial.print(F("transmission_state laoded from eeprom: "));
+  Serial.println(transmission_state);
+#endif
+
+  requestTime();                                // Request the current time from the controller.
+  wait(1000);
+
+  //connecting_to_network = !digitalRead(TRANSMISSION_TOGGLE_PIN);
+
+  if(isTransportReady()){
+    Serial.println(F("Connected to gateway"));
+    //connected_to_network = true; // connected_to_network is only set to true once a watt reading exists, to avoid sending a zero value to the controller.
+  }else{
+    Serial.println(F("! NOT CONNECTED TO GATEWAY"));  
+  }
+#endif // End of allow connecting to network
   
 #ifdef HAS_DISPLAY
   // Start the display (if there is one)
@@ -181,7 +206,7 @@ void setup()
   oled.setFont(Adafruit5x7);
   
   oled.ssd1306WriteCmd(SSD1306_DISPLAYON);
-  oled.setScroll(false);
+  oled.setScrollMode(false);
   oled.setCursor(0,0);
   oled.print(F("ENERGY USE"));
 
@@ -192,25 +217,45 @@ void setup()
 
 #ifdef DEBUG
   Serial.println(F("I have a display"));
-  oled.setCursor(0,1);
-  oled.print(F("Cnct:"));
-  oled.print(connecting_to_network);
 #endif
 
-#endif
+#endif // End of has display
 
-  Serial.println(F("connecting_to_network: "));
-  Serial.println(connecting_to_network);
+  wdt_enable(WDTO_2S);                              // Starts the watchdog timer. If it is not reset once every few seconds, then the entire device will automatically restart.
+
+  attachInterrupt(digitalPinToInterrupt(LIGHT_PULSE_SENSOR_PIN), onPulse, RISING);   // Start listening to light pulses
 }
 
-
+#ifdef ALLOW_CONNECTING_TO_NETWORK
 void send_values()
 {
+  send(relay_message.setSensor(DATA_TRANSMISSION_CHILD_ID).set(transmission_state));
+
+  if(waiting_for_first_pulse == false){
+    if( transmission_state ){  
+      send(watt_message.setSensor(WATT_CHILD_ID).set(watt,0),1); wait(RADIO_DELAY);
+      send(kwh_message.setSensor(KWH_PER_HOUR_CHILD_ID).set(kwh_hour, 4),0); // Send kwh value to gateway
+      send(kwh_message.setSensor(KWH_PER_DAY_CHILD_ID).set(kwh, 4),0); // Send kwh value to gateway
+  
+      
+    }
+    /*
+    if(previous_kwh_hour_total != 0){
+      send(kwh_message.setSensor(KWH_PER_HOUR_CHILD_ID).set(previous_kwh_hour_total, 4),0); // Send previous kwh value from the previous hour to the controller
+    }
+    if(previous_kwh_day_total != 0){
+      send(kwh_message.setSensor(KWH_PER_HOUR_CHILD_ID).set(previous_kwh_day_total, 4),0); // Send previous kwh value from the previous hour to the controller
+    }
+    */
+  }
 }
+#endif
+
 
 
 void loop()
 {
+#ifdef ALLOW_CONNECTING_TO_NETWORK
   // Send all the child states to the controller. This will initialise things there.
   if( send_all_values ){
 #ifdef DEBUG
@@ -220,62 +265,99 @@ void loop()
     send_values();
   }
 
+
+  if ( transmission_state != previous_transmission_state ){
+    previous_transmission_state = transmission_state;
+    saveState(DATA_TRANSMISSION_CHILD_ID, transmission_state);
+    Serial.print(F("Sending new data transmission state: ")); Serial.println(transmission_state);
+    send(relay_message.setSensor(DATA_TRANSMISSION_CHILD_ID).set(transmission_state),0);
+  }
+#endif // End of allow connecting to network
+
   unsigned long currentMillis = millis();
+
+#ifdef DEBUG
+  delay(200);
+  Serial.print(".");
+#endif
 
   if (currentMillis - lastLoopTime > 1000) {
     lastLoopTime = currentMillis;
-    seconds_left_in_the_day--;
-    seconds_left_in_the_hour = seconds_left_in_the_day % 3600;
-    Serial.println(seconds_left_in_the_day);
-    Serial.println(seconds_left_in_the_hour);
-
-    //if( seconds_left_in_the_day < 1 ){
-      // Calculate day value
-      // Send day value.
-   //  kwh_day_total = 0;
-   //}
-
-    // Send total kwh used in the previous hour.
-    float kwh_hour_total = kwh - previous_kwh_hour_total;
-    sendWithPermission(kwh_message.setSensor(KWH_PER_HOUR_CHILD_ID).set(kwh_hour_total, 4),0); // Send kwh value to gateway
-    previous_kwh_hour_total = kwh;
-
-    // If a full day has passed, reset the kwh counting.
-    if( seconds_left_in_the_day == 0 ){
-      Serial.println(F("End of the day"));
-      seconds_left_in_the_day = 86400;
-      pulse_count = 0;
-      kwh = 0;
-      requestTime();                                // Request the current time from the controller.
-      wait(RADIO_DELAY);
-    }
-      
-    //}
 
     wdt_reset();
+    
+    seconds_left_in_the_day--;
+    seconds_left_in_the_hour = seconds_left_in_the_day % 3600;
+    Serial.print(F("Seconds left in the hour: ")); Serial.println(seconds_left_in_the_hour);
+    
 
-    // Check if network connection button was toggled (if it exists)
-    connecting_to_network = !digitalRead(NETWORK_TOGGLE_PIN);
-    Serial.print("ppin read:");
-    Serial.println(digitalRead(NETWORK_TOGGLE_PIN));
-    if( connecting_to_network != old_connecting_to_network ){
-      old_connecting_to_network = connecting_to_network;
+    //
+    //  CHECK IF A PULSE WAS RECEIVED
+    //
+    
+    if( waiting_for_first_pulse == false ){
+      if( watt != old_watt ){
+        Serial.print(F("Watt changed to: "));
+        Serial.println(watt);
+        if (watt<((uint32_t)MAX_WATT)) {          // Check that we don't get unreasonable large watt value. This could happen when long wraps or false interrupt triggered.
+          Serial.println(F("Watt is reasonable"));
+          old_watt = watt;
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+          if(transmission_state){                 // If it is allowed to update the live values, do so.
+            Serial.println(F("Transmitting Watt value"));
+            connected_to_network = false;         // Will be set back to 'true' if a response is received from the controller.
+            send(watt_message.setSensor(WATT_CHILD_ID).set(watt),1); wait(RADIO_DELAY);
+          }
+#endif
+        }
+      }
+
+
+      // Pulse count value has changed.
+      if( pulse_count != previous_pulse_count ){
+#ifdef HAS_DISPLAY
+        oled.set1X();
+        oled.setCursor(0,1);
+        oled.print(F("pulses:"));
+        oled.print(pulse_count);
+        oled.clearToEOL();
+#endif
+        Serial.print(F("Pulse count: "));
+        Serial.println(pulse_count);
+        //send(pulse_count_message.set(pulse_count)); // Send pulse count value to gateway
+        kwh = ((float)pulse_count/((float)PULSE_FACTOR)); // Get the live kwh consumption so far this day
+        previous_pulse_count = pulse_count;
+        
+        Serial.print(F("Kwh so far today: "));
+        Serial.println(kwh);
+
+        kwh_hour = kwh - previous_kwh_hour_total; // Get the live kwh consumption so far this hour
+
+        Serial.print(F("Kwh so far this hour: "));
+        Serial.println(kwh_hour);
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+        if(transmission_state){                   // If it is allowed to update the live values, do so.
+          send(kwh_message.setSensor(KWH_PER_HOUR_CHILD_ID).set(kwh_hour, 4),0);  // Hour
+          send(kwh_message.setSensor(KWH_PER_DAY_CHILD_ID).set(kwh, 4),0);        // Day
+        }
+#endif
+      }
       
-  #ifdef HAS_DISPLAY                                // TODO temporary
-      oled.set1X();
-      oled.setCursor(0,1);
-      oled.print(F("Cnct:"));
-      oled.print(connecting_to_network);
-  #endif
-  
-      Serial.println(F("Connecting to network changed to: "));
-      Serial.println(connecting_to_network);
     }
+    else{
+      Serial.println("Still waiting to receive the first light pulse");
+    }
+
+
+
+    //
+    //  UPDATING THE DISPLAY
+    //
 
 #ifdef HAS_DISPLAY
     oled.set1X();
     oled.setCursor(100,0);
-    oled.print(seconds_left_in_the_day % 3600);
+    oled.print(seconds_left_in_the_hour);
     oled.clearToEOL();
 
     oled.set2X();
@@ -288,36 +370,17 @@ void loop()
 #endif
 
 
-    if( seconds_left_in_the_day % 60 == 0){
-      Serial.println(F("60 seconds have passed"));
-    }
 
-
-    // Once every 10 seconds, update the values on the gateway. For example if there are 40 seconds left.
-    if( seconds_left_in_the_day % 10 == 0){
-      if( watt != 0 && watt != old_watt ){
-        if (watt<((uint32_t)MAX_WATT)) {              // Check that we don't get unreasonable large watt value. This could happen when long wraps or false interrupt triggered.
-          connected = false;                          // Will be turned back on if a response is received.
-          send(watt_message.setSensor(WATT_CHILD_ID).set(watt),1); wait(RADIO_DELAY);
-          sendWithPermission(watt_message.setSensor(WATT_CHILD_ID).set(watt),1);
-          old_watt = watt;
-        }
-        Serial.print("Watt:");
-        Serial.println(watt);
-      }
-
-      
-    }
-
-    else if( seconds_left_in_the_day % 10 == 9){ // A second later than the above. For example if there are 39 seconds left.
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+    if( seconds_left_in_the_day % 10 == 9){ // A second later than the above. For example if there are 39 seconds left.
       // We asked the server to acknowledge that it has received the data. If it hasn't, remove the connection icon.
-      if( connected ){ 
+      if( connected_to_network ){ 
         Serial.println(F("Connection is ok"));
         // add W icon
 #ifdef HAS_DISPLAY
         oled.set1X();
-        oled.setCursor(90,0);
-        oled.print(F("w"));
+        oled.setCursor(W_POSITION,0);
+        oled.print(F("W"));
 #endif
       }
       else {
@@ -325,65 +388,111 @@ void loop()
 #ifdef HAS_DISPLAY
         // remove W icon
         oled.set1X();
-        oled.setCursor(90,0);
-        oled.print(F(" "));
+        oled.setCursor(W_POSITION,0);
+        oled.print(F("."));
 #endif
       }
     }
-       
-    // Pulse count value has changed
-    if( pulse_count != old_pulse_count ){
+
+    // Set whether data transmission is allowed
 #ifdef HAS_DISPLAY
-      oled.set1X();
-      oled.setCursor(0,1);
-      oled.print(F("pulses:"));
-      oled.print(pulse_count);
-      oled.clearToEOL();
+    oled.setCursor(T_POSITION,0);
+    oled.set1X();
+    if( transmission_state ){
+      oled.print(F("T"));
+    }
+    else{
+      oled.print(F("."));
+    }
 #endif
-      Serial.print(F("Pulse count: "));
-      Serial.println(pulse_count);
-      //send(pulse_count_message.set(pulse_count));   // Send pulse count value to gateway
-      kwh = ((float)pulse_count/((float)PULSE_FACTOR));
-      old_pulse_count = pulse_count;
-      if( kwh != old_kwh ){ // We only send a new value if it changed.
-        sendWithPermission(kwh_message.setSensor(KWH_PER_DAY_CHILD_ID).set(kwh, 4),0); // Send kwh value to gateway
-        old_kwh = kwh;
-      }
+
+#endif // end of allow connecting to network
+    
+       
+
+
+    //
+    //  UPDATING THE AVERAGE TOTAL VALUES
+    //
+    
+    if( seconds_left_in_the_hour == 0 ){
+      Serial.println(F(""));
+      // Send total kwh used in the previous hour.
+
+      kwh_hour_total = kwh - previous_kwh_hour_total;
+      Serial.print(F("A new hour is starting. Kwh used over the last hour: "));
+      Serial.println(kwh_hour_total);
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(kwh_message.setSensor(KWH_PER_HOUR_TOTAL_CHILD_ID).set(kwh_hour_total, 4),0); wait(RADIO_DELAY);// Send kwh value for the past hour to the controller
+#endif
+      previous_kwh_hour_total = kwh;
+    }
+
+    // If a full day has passed, reset the kwh counting.
+    if( seconds_left_in_the_day == 0 ){
+      Serial.print(F("A new day is starting. Kwh used over the last day: "));
+      Serial.println(kwh);
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK
+      send(kwh_message.setSensor(KWH_PER_DAY_TOTAL_CHILD_ID).set(kwh, 4),0); wait(RADIO_DELAY);// Send kwh value for the past day to the controller
+      requestTime();                                // Try to synchronize the current time with the controller.
+#endif
+      seconds_left_in_the_day = 86400;
+      pulse_count = 0;
+      kwh = 0;
     }
     
-  }
+    
+  } // End of main loop that runs every second
 }
 
+
+//
+//  HANDLE INCOMING MESSAGES
+//
+
+#ifdef ALLOW_CONNECTING_TO_NETWORK
 void receive(const MyMessage &message)
 {
-#ifdef ALLOW_CONNECTING_TO_NETWORK
-  connected = true;
-  if (message.type==V_VAR1) {
-    pulse_count = old_pulse_count = message.getLong();
+  Serial.println(F(">> receiving message"));
+  connected_to_network = true;
+
+  if( message.isAck() ){
+    Serial.println(F("-Got echo"));
+    return;
+  }
+  if (message.type == V_STATUS && message.sensor == DATA_TRANSMISSION_CHILD_ID ){
+    transmission_state = message.getBool(); //?RELAY_ON:RELAY_OFF;
+    Serial.print(F("-New desired transmission state: ")); Serial.println(transmission_state);
+  }  
+
+  /*
+  else if (message.type==V_VAR1) {
+    pulse_count = previous_pulse_count = message.getLong();
     Serial.print("Received last pulse count from gateway:");
     Serial.println(pulse_count);
     pulse_count_received = true;
   }
-#endif
+  */
 }
 
-
-boolean sendWithPermission(MyMessage &msg, boolean require_echo)
-{
-#ifdef ALLOW_CONNECTING_TO_NETWORK
-  Serial.println("in sendWithPermission");
-  // Check permission and send here
-  Serial.println(connecting_to_network);
-  if( connecting_to_network ){
-    Serial.println(F("Sending"));
-    boolean send_ok = send(msg, require_echo);
-    Serial.println(send_ok);
-    return send_ok;
-  }
-#endif
-  return false;
+void receiveTime(unsigned long controller_time) {
+  Serial.print(F("Received time: ")); Serial.println(controller_time);
+  epoch_time = controller_time;
+  seconds_left_in_the_day = 86400 - (controller_time % 86400);
+  Serial.print("Second left in the day: ");
+  Serial.println(seconds_left_in_the_day);
+  connected_to_network = true;
 }
+#endif // End of allow connecting to network
 
+
+
+
+//
+//  HANDLE LED PULSE
+//
 
 void onPulse()
 {
@@ -395,19 +504,14 @@ void onPulse()
     }
     watt = (3600000000.0 /interval) / ppwh;
     last_blink = new_blink;
+    pulse_count++;
+    if(waiting_for_first_pulse){
+      waiting_for_first_pulse = false;
+    }
   }
-  pulse_count++;
+#ifdef DEBUG
   Serial.println("x");
-}
-
-
-void receiveTime(unsigned long controller_time) {
-  Serial.print(F("Received time: ")); Serial.println(controller_time);
-  epoch_time = controller_time;
-  seconds_left_in_the_day = 86400 - (controller_time % 86400);
-  Serial.print("Second left in the day: ");
-  Serial.println(seconds_left_in_the_day);
-  connected = true;
+#endif
 }
 
 
@@ -415,7 +519,8 @@ void receiveTime(unsigned long controller_time) {
 
 
 
-/*
+/* This code builds on the MySensors project.
+ *
  * The MySensors Arduino library handles the wireless radio link and protocol
  * between your home built sensors/actuators and HA controller of choice.
  * The sensors forms a self healing radio network with optional repeaters. Each
@@ -435,18 +540,4 @@ void receiveTime(unsigned long controller_time) {
  *
  *******************************
  *
- * REVISION HISTORY
- * Version 1.0 - Henrik Ekblad
- *
- * DESCRIPTION
- * This sketch provides an example how to implement a LM393 PCB
- * Use this sensor to measure kwh and Watt of your house meter
- * You need to set the correct pulsefactor of your meter (blinks per kwh).
- * The sensor starts by fetching current kwh value from gateway.
- * Reports both kwh and Watt back to gateway.
- *
- * Unfortunately millis() won't increment when the Arduino is in
- * sleepmode. So we cannot make this sensor sleep if we also want
- * to calculate/report watt value.
- * http://www.mysensors.org/build/pulse_power
  */
