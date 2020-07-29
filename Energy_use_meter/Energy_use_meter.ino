@@ -41,7 +41,7 @@
 #define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors advanced security
-#define MY_ENCRYPTION_SIMPLE_PASSWD "smarthome"      // Be aware, the length of the password has an effect on memory use.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
