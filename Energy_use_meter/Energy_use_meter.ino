@@ -41,7 +41,7 @@
 #define MY_RF24_PA_LEVEL RF24_PA_MAX
 
 // Mysensors advanced security
-#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "smarthome"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
@@ -100,13 +100,11 @@ float kwh_hour_total = 0;                           // How much electricity was 
 
 
 unsigned long seconds_left_in_the_day = 86400;      // When this counts down to 60, it will automatically trigger a re-request of the current time from the controller.
-int seconds_left_in_the_hour = 1;
+unsigned int seconds_left_in_the_hour = 0;
 unsigned long epoch_time = 0;                       // Holds the universal epoch time, which is requested from the gateway once in a while. 
 
 unsigned long lastLoopTime = 0;                     // Holds the last time the main loop ran.
 
-
-//long millisecond_counter = 0;
 #define millis_period = 3600000;                    // By default, the Kwh measurement works per day.
 
 // REQUIRED LIBRARIES
@@ -157,7 +155,7 @@ void presentation()
   // Register this device with the controller
   present(WATT_CHILD_ID, S_POWER,F("Wattage")); wait(RADIO_DELAY);
   present(KWH_PER_DAY_CHILD_ID, S_POWER,F("Daily use")); wait(RADIO_DELAY);
-  present(KWH_PER_DAY_TOTAL_CHILD_ID, S_POWER,F("Yesterday total")); wait(RADIO_DELAY);
+  present(KWH_PER_DAY_TOTAL_CHILD_ID, S_POWER,F("Yesterday")); wait(RADIO_DELAY);
   present(KWH_PER_HOUR_CHILD_ID, S_POWER,F("Hourly use")); wait(RADIO_DELAY);
   present(KWH_PER_HOUR_TOTAL_CHILD_ID, S_POWER,F("Last hourly total")); wait(RADIO_DELAY);
   present(DATA_TRANSMISSION_CHILD_ID, S_BINARY, F("Data transmission")); wait(RADIO_DELAY);
@@ -183,7 +181,7 @@ void setup()
   transmission_state = loadState(DATA_TRANSMISSION_CHILD_ID);
 
 #ifdef DEBUG
-  Serial.print(F("transmission_state laoded from eeprom: "));
+  Serial.print(F("transmission_state loaded from eeprom: "));
   Serial.println(transmission_state);
 #endif
 
@@ -415,10 +413,9 @@ void loop()
     //  UPDATING THE AVERAGE TOTAL VALUES
     //
     
-    if( seconds_left_in_the_hour == 0 ){
+    if( seconds_left_in_the_hour == 0){
       Serial.println(F(""));
       // Send total kwh used in the previous hour.
-
       kwh_hour_total = kwh - previous_kwh_hour_total;
       Serial.print(F("A new hour is starting. Kwh used over the last hour: "));
       Serial.println(kwh_hour_total);
@@ -441,6 +438,7 @@ void loop()
       seconds_left_in_the_day = 86400;
       pulse_count = 0;
       kwh = 0;
+      previous_kwh_hour_total = 0;
     }
     
     
