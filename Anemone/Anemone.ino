@@ -29,8 +29,8 @@
 
 #define JESSE                                       // If this is Jesse's Candle prototype
 
-#define DEBUG                                       // Show general debugging data from the device
-#define MY_DEBUG                                    // Debug the MySensors network activity
+//#define DEBUG                                       // Show general debugging data from the device
+//#define MY_DEBUG                                    // Debug the MySensors network activity
 
 
 // MySensors radio type
