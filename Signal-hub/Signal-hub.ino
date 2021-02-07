@@ -30,6 +30,8 @@
 
 #define HAS_TOUCH_SCREEN                            // Have you connected a touch screen? Connecting a touch screen is recommended.  
 
+#define VERTICALLY_FLIP_TOUCH_SCREEN                // Vertical flip. Select this if you would like to vertically flip the touch screen.  
+
 #define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
  /* END OF SETTINGS
@@ -76,7 +78,6 @@
   *  - Allow multiple quick succession touch screen events to add play commands to the playlist.
   */
 
-//#define VERTICALLY_FLIP_TOUCH_SCREEN                // Vertical flip. Select this if you would like to vertically flip the touch screen.  
 
 //#define DEBUG                                     // Do you want to see extra debugging information in the serial output?
 //#define DEBUG_SCREEN                              // Do you want to see extra debugging information about the touch screen in the serial output?
