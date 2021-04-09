@@ -15,7 +15,7 @@
 
 //#define MY_REPEATER_FEATURE                       // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help your network reach further.
 
-#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+//#define RF_NANO                                   // RF-Nano Classic. The Candle project recommends using the RF-Nano, which is an Arduino Nano with a built in NRF24 radio module. There are two versions of the Nano. Both have a built in antenna, but one also has an antenna-connector plug. Enable this option if you are using the RF Nano variant WITHOUT the antenna connector.
 
 
  /* END OF SETTINGS
@@ -25,6 +25,7 @@
 
 
 //#define DEBUG                                       // General debug option, give extra information via the serial output when enabled.
+//#define TEST
 //#define MY_DEBUG                                    // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 
 
@@ -88,8 +89,8 @@ boolean transmission_state = true;
 boolean previous_transmission_state = true;
 volatile boolean connected_to_network = false;      // Whether the device has actually been able to succesfully connect to the network.
 volatile boolean waiting_for_first_pulse = true;
-volatile uint32_t pulse_count = 0;                  // uint32_t = unsigned long
-volatile uint32_t last_blink = 0;
+volatile uint32_t pulse_count = 0;                  // uint32_t = unsigned long. 
+volatile uint32_t last_blink = 0;                   // Used to accurately measure the time between pulses in microseconds.
 volatile uint32_t watt = 0;
 uint32_t previous_pulse_count = 0;
 uint32_t old_watt = 0;
@@ -264,7 +265,7 @@ void loop()
   }
 
 
-  if ( transmission_state != previous_transmission_state ){
+  if( transmission_state != previous_transmission_state ){
     previous_transmission_state = transmission_state;
     saveState(DATA_TRANSMISSION_CHILD_ID, transmission_state);
     Serial.print(F("Sending new data transmission state: ")); Serial.println(transmission_state);
@@ -275,9 +276,35 @@ void loop()
   unsigned long currentMillis = millis();
 
 #ifdef DEBUG
-  delay(200);
+  wait(200);
   Serial.print(".");
 #endif
+
+
+#ifdef TEST
+  // Creates fake pulses, used for testing.
+  static int nextPulseDelay = 2000;
+  static long lastTestPulseTime = 0;
+  if (currentMillis - lastTestPulseTime > nextPulseDelay) {
+    Serial.println(F("Test pulse"));
+    lastTestPulseTime = currentMillis;
+    nextPulseDelay = 500 + random(3000);
+    watt = 3510 - nextPulseDelay;
+    pulse_count++;
+    if(waiting_for_first_pulse){
+      waiting_for_first_pulse = false;
+    }
+  }
+#endif
+
+
+
+
+
+
+
+
+
 
   if (currentMillis - lastLoopTime > 1000) {
     lastLoopTime = currentMillis;
@@ -313,6 +340,8 @@ void loop()
 
       // Pulse count value has changed.
       if( pulse_count != previous_pulse_count ){
+        digitalWrite(LED_BUILTIN, true);
+        
 #ifdef HAS_DISPLAY
         oled.set1X();
         oled.setCursor(0,1);
@@ -336,6 +365,10 @@ void loop()
 #ifdef ALLOW_CONNECTING_TO_NETWORK
         if(transmission_state){                   // If it is allowed to update the live values, do so.
           send(kwh_message.setSensor(KWH_PER_HOUR_CHILD_ID).set(kwh_hour, 4),0);  // Hour
+#endif
+          wait(100);                              // Allows the built-in LED to blink in unison with the electricity meter. Also gives the radio some time to recover before retransmitting.
+          digitalWrite(LED_BUILTIN, false);
+#ifdef ALLOW_CONNECTING_TO_NETWORK
           send(kwh_message.setSensor(KWH_PER_DAY_CHILD_ID).set(kwh, 4),0);        // Day
         }
 #endif
@@ -511,9 +544,6 @@ void onPulse()
   Serial.println("x");
 #endif
 }
-
-
-
 
 
 
