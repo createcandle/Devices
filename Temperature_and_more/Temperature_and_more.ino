@@ -25,13 +25,14 @@
 
 #define SECONDS_BETWEEN_SENDING 60                  // Interval. Sleep time between taking and transmitting readings from the BME sensor (in seconds). Keep this value at 60 if you have enabled the forecast feature, as the forecast algorithm needs a sample every minute.
 
-#define HAS_TOUCH_SCREEN                            // Did you connect a touch screen? Touching it will turn the screen itself on and off.
+//#define HAS_TOUCH_SCREEN                          // Did you connect a touch screen? Touching it will turn the screen itself on and off.
 
 #define ALLOW_CONNECTING_TO_NETWORK                 // Connect wirelessly. Is this device allowed to connect to the local Candle network? For privacy or security reasons you may prefer a stand-alone device.
 
 //#define MY_REPEATER_FEATURE                       // Act as a repeater? The devices can pass along messages to each other to increase the range of your network.
 
-#define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
+//#define RF_NANO                                     // RF-Nano Classic. The Candle project recommends using the RF-Nano, which is an Arduino Nano with a built in NRF24 radio module. There are two versions of the Nano. Both have a built in antenna, but one also has an antenna-connector plug. Enable this option if you are using the RF Nano variant WITHOUT the antenna connector.
+
 
  /* END OF SETTINGS
  *
