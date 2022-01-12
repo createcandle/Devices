@@ -253,7 +253,7 @@ void setup()
 
 
 #ifdef HAS_CO2_SENSOR
-  wait(2000);                                       // Give the sensor some time to boot up
+  wait(8000);                                       // Give the sensor some time to boot up
   co2_sensor.begin(9600);
   //wait(4000);                                     // Give the sensor some time to boot up
 #ifdef HAS_DISPLAY
