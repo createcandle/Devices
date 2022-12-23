@@ -52,7 +52,7 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
  *  
 */
 
-//#define DEBUG                                     // Display debug information in the serial output.
+#define DEBUG                                     // Display debug information in the serial output.
 //#define MY_DEBUG                                  // Enable MySensors debug output to the serial monitor, so you can check if the radio is working ok.
 //#define JESSE                                     // Enables the special features for Jesse Howard's Candle prototypes.
 
@@ -71,7 +71,7 @@ char rotatingPassword2[26] = "door2";               // Door 2 password. If the d
 
 // Mysensors security
 //#define DEBUG_SIGNING
-#define MY_ENCRYPTION_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
+#define MY_ENCRYPTION_SIMPLE_PASSWD "smarthome"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SECURITY_SIMPLE_PASSWD "changeme"      // Be aware, the length of the password has an effect on memory use.
 //#define MY_SIGNING_SOFT_RANDOMSEED_PIN A7         // Setting a pin to pickup random electromagnetic noise helps make encryption more secure.
 
@@ -647,6 +647,7 @@ void loop()
     //Serial.print(F("checkingDoor ")); Serial.println(checkingDoor);
     if( desired_door_states[checkingDoor] != actualDoorStates[checkingDoor] ){
       Serial.println(F("Changing door status"));
+      Serial.println(checkingDoor);
       char updateMessage[11];
       if( desired_door_states[checkingDoor] == LOCKED ){
         digitalWrite(RELAY1_PIN + checkingDoor, RELAY_LOCKED);
@@ -1055,6 +1056,7 @@ void receive(const MyMessage &message)
   //timeOutCount = 0;
 #ifdef DEBUG
   Serial.print(F("->receiving message for child ")); Serial.println(message.sensor);
+  Serial.print(F("->message type: ")); Serial.println(message.type);
 #endif
 
   if( message.isAck() ){
@@ -1071,7 +1073,7 @@ void receive(const MyMessage &message)
     }
   }
   else if( message.type == V_STATUS ){
-
+    
     send(relay_message.setSensor(message.sensor).set( message.getBool() ));
     
     if( message.sensor == TRANSMISSION_STATE_CHILD_ID ){  // Data transmission toggle  
@@ -1083,6 +1085,13 @@ void receive(const MyMessage &message)
       desired_sms_control_state = message.getBool(); //?RELAY_ON:RELAY_OFF;
       //send(relay_message.setSensor(SMS_CONTROL_ID).set(desired_sms_control_state));
       Serial.print(F("-New desired sms control state: ")); Serial.println(desired_sms_control_state);
+    }
+    else{
+      desired_door_states[message.sensor - RELAY1_CHILD_ID] = message.getBool()?RELAY_LOCKED:RELAY_UNLOCKED;
+      Serial.print(F("Controller -> door ")); Serial.print(message.sensor - RELAY1_CHILD_ID); Serial.print(F(" -> ")); Serial.println(desired_door_states[message.sensor - RELAY1_CHILD_ID]);
+      if( !transmission_state ){ // We only echo this state back to the controller straight from the receive function if the main loop won't update the controller because the data transmission is disabled.
+        send(lock_message.setSensor(message.sensor).set( message.getBool() )); // Tell the controller that the value was received.
+      }
     }
   }
   else if( message.type == V_TEXT ){
@@ -1135,7 +1144,9 @@ void receive(const MyMessage &message)
       Serial.print(F("phone2: ")); Serial.println(phone2);
 #endif
     }
-
+    else{
+      Serial.println(F("Incoming message fell through"));  
+    }
     // If could also be that the Status and Received SMS string are sent back. Those should just be ignored.
   }
 }
