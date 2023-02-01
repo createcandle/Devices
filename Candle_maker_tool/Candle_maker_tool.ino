@@ -31,7 +31,7 @@
 //#define ANALOG_SENSOR1_CONNECTED                  // Analog sensor 1. Did you connect an analog sensor on A0?
 //#define ANALOG_SENSOR2_CONNECTED                  // Analog sensor 2. Did you connect an analog sensor on A1?
 
-//#define BINARY_ACTUATOR1_CONNECTED                // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
+#define BINARY_ACTUATOR1_CONNECTED                // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
 //#define BINARY_ACTUATOR1_SELF_LOCKING             // Turn digital output 1 off automatically? If you have connected something on the first digital output, should that part be set back to 'off' after a little while?
 
 //#define BINARY_ACTUATOR2_CONNECTED                // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
@@ -539,7 +539,7 @@ void loop()
     binary_actuator1_state = desired_binary_actuator1_state;
     digitalWrite(BINARY_ACTUATOR1_PIN, binary_actuator1_state);
     desired_binary_actuator1_delay = SELF_LOCKING_DELAY;
-    send(binary_sensor_message.setSensor(BINARY_SENSOR1_CHILD_ID).set(binary_sensor1_state)); wait(RADIO_DELAY);
+    send(binary_actuator_message.setSensor(BINARY_SENSOR1_CHILD_ID).set(binary_sensor1_state)); wait(RADIO_DELAY);
   }
 #endif
 #ifdef BINARY_ACTUATOR2_CONNECTED
@@ -549,7 +549,7 @@ void loop()
     binary_actuator1_state = desired_binary_actuator1_state;
     digitalWrite(BINARY_ACTUATOR1_PIN, binary_actuator1_state);
     desired_binary_actuator2_delay = SELF_LOCKING_DELAY;
-    send(binary_sensor_message.setSensor(BINARY_SENSOR2_CHILD_ID).set(binary_sensor2_state)); wait(RADIO_DELAY);
+    send(binary_actuator_message.setSensor(BINARY_SENSOR2_CHILD_ID).set(binary_sensor2_state)); wait(RADIO_DELAY);
   }
 #endif
 
