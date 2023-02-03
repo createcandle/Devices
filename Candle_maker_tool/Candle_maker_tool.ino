@@ -34,7 +34,7 @@
 #define BINARY_ACTUATOR1_CONNECTED                // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
 //#define BINARY_ACTUATOR1_SELF_LOCKING             // Turn digital output 1 off automatically? If you have connected something on the first digital output, should that part be set back to 'off' after a little while?
 
-#define BINARY_ACTUATOR2_CONNECTED                // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
+#define BINARY_ACTUATOR2_CONNECTED                // Digital output 2. Did you connect an LED, relay or other binary 'actuator' part to pin 5?
 //#define BINARY_ACTUATOR2_SELF_LOCKING             // Turn digital output 2 off automatically? Should digital output 2 turn itself off after a little while?
 
 #define SELF_LOCKING_DELAY 3                        // Turn off delay. If you want a digital output to turn itself off again after a short amount of time, how many seconds should pass before this happens?
