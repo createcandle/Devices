@@ -31,10 +31,10 @@
 //#define ANALOG_SENSOR1_CONNECTED                  // Analog sensor 1. Did you connect an analog sensor on A0?
 //#define ANALOG_SENSOR2_CONNECTED                  // Analog sensor 2. Did you connect an analog sensor on A1?
 
-#define BINARY_ACTUATOR1_CONNECTED                // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
+//#define BINARY_ACTUATOR1_CONNECTED                // Digital output 1. Did you connect an LED, relay or other binary 'actuator' part to pin 4?
 //#define BINARY_ACTUATOR1_SELF_LOCKING             // Turn digital output 1 off automatically? If you have connected something on the first digital output, should that part be set back to 'off' after a little while?
 
-#define BINARY_ACTUATOR2_CONNECTED                // Digital output 2. Did you connect an LED, relay or other binary 'actuator' part to pin 5?
+//#define BINARY_ACTUATOR2_CONNECTED                // Digital output 2. Did you connect an LED, relay or other binary 'actuator' part to pin 5?
 //#define BINARY_ACTUATOR2_SELF_LOCKING             // Turn digital output 2 off automatically? Should digital output 2 turn itself off after a little while?
 
 #define SELF_LOCKING_DELAY 3                        // Turn off delay. If you want a digital output to turn itself off again after a short amount of time, how many seconds should pass before this happens?
@@ -49,7 +49,7 @@
 //#define HAS_DISPLAY                               // Did you connect an OLED display? If you connect a display you can send text messages to display on it.
 //#define TWO_LINES                                 // Two lines on display. Adds an extra output for the display, so you can send two strings to it instead of one.
 
-#define MY_REPEATER_FEATURE                         // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help the signal spread further.
+//#define MY_REPEATER_FEATURE                         // Act as signal repeater. Should this sensor act as a repeater for your other devices? This can help the signal spread further.
 
 #define RF_NANO                                     // RF-Nano. Check this box if you are using the RF-Nano Arduino, which has a built in radio. The Candle project uses the RF-Nano.
 
